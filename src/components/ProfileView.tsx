@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pencil, User as UserIcon, Bell, Lock, Github, QrCode, ChevronRight, LogOut, Camera, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Pencil, User as UserIcon, Bell, Lock, Github, QrCode, ChevronRight, LogOut, Camera, X, Loader2, Moon, Sun } from 'lucide-react';
 import { User } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
 import { auth } from '../firebase';
@@ -20,21 +20,59 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('advocode_dark_mode') === 'true');
 
   // Edit fields
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio);
-  const [regNumber, setRegNumber] = useState(user.regNumber);
+  const [username, setUsername] = useState(user.username || user.regNumber || '@' + (user.email?.split('@')[0] || 'dev_' + Math.floor(Math.random() * 1000)));
   const [skillsString, setSkillsString] = useState(user.skills.join(', '));
   const [customAvatarUrl, setCustomAvatarUrl] = useState(user.avatarUrl || '');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [customCoverUrl, setCustomCoverUrl] = useState(user.coverUrl || '');
+
+  const toggleDarkMode = () => {
+    const next = !isDark;
+    setIsDark(next);
+    localStorage.setItem('advocode_dark_mode', String(next));
+    if (next) {
+      document.documentElement.classList.add('dark');
+      onToast('🌙 Dark theme enabled');
+    } else {
+      document.documentElement.classList.remove('dark');
+      onToast('☀️ Light theme enabled');
+    }
+  };
+
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingCover(true);
+      onToast('⏳ Uploading cover photo...');
+      const url = await uploadToImgBB(file);
+      setCustomCoverUrl(url);
+      const updatedUser: User = {
+        ...user,
+        coverUrl: url,
+      };
+      onUpdateUser(updatedUser);
+      onToast('✓ Cover photo updated successfully!');
+    } catch (err: any) {
+      console.error(err);
+      onToast(`Cover upload failed: ${err.message}`);
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       setUploadingAvatar(true);
-      onToast('⏳ Uploading profile photo to ImgBB cloud storage...');
+      onToast('⏳ Uploading profile photo...');
       const url = await uploadToImgBB(file);
       setCustomAvatarUrl(url);
       if (auth.currentUser) {
@@ -45,7 +83,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         avatarUrl: url,
       };
       onUpdateUser(updatedUser);
-      onToast('✓ Profile photo uploaded to ImgBB & saved to Firestore!');
+      onToast('✓ Profile photo uploaded successfully!');
     } catch (err: any) {
       console.error(err);
       onToast(`Photo upload failed: ${err.message}`);
@@ -70,9 +108,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       ...user,
       name: name.trim(),
       bio: bio.trim(),
-      regNumber: regNumber.trim(),
+      username: username.trim().startsWith('@') ? username.trim() : '@' + username.trim(),
+      regNumber: username.trim(),
       skills: parsedSkills.length > 0 ? parsedSkills : ['General'],
       avatarUrl: customAvatarUrl || user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=2563EB&color=fff`,
+      coverUrl: customCoverUrl || user.coverUrl || '',
     };
 
     onUpdateUser(updatedUser);
@@ -89,13 +129,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         className="hidden"
         onChange={handleAvatarFileChange}
       />
+      <input
+        type="file"
+        id="profile-cover-upload"
+        accept="image/*"
+        className="hidden"
+        onChange={handleCoverFileChange}
+      />
       
       {/* Profile Header Card */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-10 mb-8 relative overflow-hidden">
-        {/* Decorative Top Banner */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-slate-900 to-slate-800"></div>
+        {/* LinkedIn style Cover Photo Banner */}
+        <div 
+          className="absolute top-0 left-0 w-full h-44 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 overflow-hidden group cursor-pointer"
+          onClick={() => document.getElementById('profile-cover-upload')?.click()}
+          title="Click to change cover photo"
+        >
+          {(customCoverUrl || user.coverUrl) ? (
+            <img src={customCoverUrl || user.coverUrl} alt="Cover" className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
+          ) : (
+            <div className="w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-600/30 via-slate-900 to-black flex items-end justify-end p-3">
+            </div>
+          )}
+          <div className="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-all border border-white/10 shadow-sm">
+            {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+            <span>{uploadingCover ? 'Uploading...' : 'Edit Cover Photo'}</span>
+          </div>
+        </div>
         
-        <div className="relative flex flex-col md:flex-row items-center md:items-end gap-6 mt-12 md:mt-16">
+        <div className="relative flex flex-col md:flex-row items-center md:items-end gap-6 mt-20 md:mt-24">
           <div className="relative group cursor-pointer" onClick={() => document.getElementById('profile-avatar-upload')?.click()}>
             <img
               src={
@@ -126,8 +188,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <p className="text-sm text-slate-500 font-semibold mt-1">
               {user.bio}
             </p>
-            <p className="text-xs text-slate-400 mt-1 font-mono uppercase tracking-wider">
-              Reg: {user.regNumber}
+            <p className="text-xs text-blue-600 mt-1 font-mono font-bold">
+              {user.username || user.regNumber || '@developer'}
             </p>
             
             {/* Skills Badges */}
@@ -159,7 +221,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 // Sync states
                 setName(user.name);
                 setBio(user.bio);
-                setRegNumber(user.regNumber);
+                setUsername(user.username || user.regNumber || '@developer');
                 setSkillsString(user.skills.join(', '));
               }}
               className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
@@ -169,6 +231,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
               <span className="flex-1 text-sm font-bold text-slate-900">Edit Profile</span>
               <ChevronRight className="w-4 h-4 text-slate-300" />
+            </div>
+
+            <div
+              onClick={toggleDarkMode}
+              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
+            >
+              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
+                {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+              </div>
+              <span className="flex-1 text-sm font-bold text-slate-900">Dark Theme Toggle</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase">
+                {isDark ? 'Dark' : 'Light'}
+              </span>
             </div>
 
             <div
@@ -202,7 +277,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </h3>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 divide-y divide-slate-100">
             <div
-              onClick={() => onToast('Your GitHub profile is synchronized with MKU IT organization!')}
+              onClick={() => onToast('Your GitHub profile is synchronized with AdvocoDe organization!')}
               className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
@@ -274,7 +349,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
               <div>
                 <h4 className="font-bold text-slate-800 text-base">{user.name}</h4>
-                <p className="text-xs text-slate-400 font-mono tracking-widest mt-0.5">{user.regNumber}</p>
+                <p className="text-xs text-slate-400 font-mono tracking-widest mt-0.5">{user.username || user.regNumber}</p>
                 <p className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 font-bold px-3 py-1 rounded-full inline-block mt-3 uppercase tracking-wider">
                   Active Member
                 </p>
@@ -322,7 +397,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-blue-600 font-bold mt-2 uppercase tracking-wider cursor-pointer hover:underline" onClick={() => document.getElementById('profile-avatar-upload')?.click()}>Click photo to upload custom image (ImgBB)</p>
+                <p className="text-[10px] text-blue-600 font-bold mt-2 uppercase tracking-wider cursor-pointer hover:underline" onClick={() => document.getElementById('profile-avatar-upload')?.click()}>Click photo to upload custom image</p>
               </div>
 
               <div className="space-y-4">
@@ -354,13 +429,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
-                    Registration Number
+                    Unique Username
                   </label>
                   <input
                     type="text"
                     required
-                    value={regNumber}
-                    onChange={(e) => setRegNumber(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="@username"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm text-slate-900 font-mono"
                   />
                 </div>

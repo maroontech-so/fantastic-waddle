@@ -420,7 +420,7 @@ export const getTemplateForProject = (
 <section id="about" class="hero">
   <span class="badge">AVAILABLE FOR HIRE</span>
   <h1>Creative Full-Stack Developer</h1>
-  <p>Student at Mount Kenya University IT Club. Passionate about building accessible, performant web applications.</p>
+  <p>Member of &lt;/AdvocoDe&gt;. Passionate about building accessible, performant web applications.</p>
   <div class="cta-buttons">
     <a href="#projects" class="btn btn-primary">View Projects</a>
     <a href="#contact" class="btn btn-outline">Contact Me</a>

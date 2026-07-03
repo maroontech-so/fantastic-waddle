@@ -40,6 +40,7 @@ import {
 import { MemberBioModal, MemberProfile } from './MemberBioModal';
 import { db, auth, rtdb } from '../firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { cleanForFirestore } from '../utils/clean';
 import { ref, onValue, push } from 'firebase/database';
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
@@ -174,7 +175,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     hasReposted: false,
     comments: [
       { id: 'c1', authorName: 'Alex M.', text: 'This is brilliant! Solving state flash loads is critical. Using this in my project.', time: '2 hrs ago', avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
-      { id: 'c2', authorName: 'Sarah T.', text: 'Extremely clean code, Mike! Perfect use of lazy initialization.', time: '1 hr ago', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' }
+      { id: 'c2', authorName: 'David K.', text: 'Extremely clean code, Mike! Perfect use of lazy initialization.', time: '1 hr ago', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' }
     ],
     time: '3 hours ago'
   },
@@ -184,7 +185,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     content: 'Working on the upcoming Hackathon registration mobile layouts. Should form inputs default to 16px font-size on iOS to prevent auto-zooming, or stick to 14px with responsive scale? What are your thoughts on modern touch guidelines?',
     type: 'question',
     author: {
-      name: 'Sarah T.',
+      name: 'David K.',
       avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
       regNumber: 'BIT/2024/4921',
       specialty: 'UI/UX Design Lead',
@@ -239,14 +240,14 @@ const DEFAULT_POSTS: EngagementPost[] = [
   {
     id: 'post_announcement_1',
     title: 'OFFICIAL ANNOUNCEMENT: Annual Web Hackathon 2026',
-    content: 'ATTENTION ALL IT CLUB MEMBERS: Mount Kenya University Annual Web Development Hackathon has been officially scheduled! Registration is now open on the portal. Student groups must design a responsive workspace utilizing clean states and optimized layout workflows. All are welcome to participate!',
+    content: 'ATTENTION ALL MEMBERS: The </AdvocoDe> Annual Web Development Hackathon has been officially scheduled! Registration is now open on the portal. Student groups must design a responsive workspace utilizing clean states and optimized layout workflows. All are welcome to participate!',
     type: 'announcement',
     author: {
       name: 'Prof. J. Ndegwa',
       avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
       regNumber: 'BIT/Patron/101',
       specialty: 'IT Department Patron',
-      bio: 'Advising Mount Kenya University IT Club projects and hackathon setups',
+      bio: 'Advising </AdvocoDe> projects and hackathon setups',
       techStack: ['Web Architecture', 'Database Engineering', 'Systems Analysis'],
       streakDays: 100,
       points: 1200,
@@ -260,7 +261,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     hasReposted: false,
     comments: [
       { id: 'ca1', authorName: 'Mike O.', text: 'This is huge! My team is already drafting an interactive compiler model.', time: '12 hrs ago' },
-      { id: 'ca2', authorName: 'Sarah T.', text: 'Is registration open to Year 1 students? I would love to mentor them.', time: '8 hrs ago' }
+      { id: 'ca2', authorName: 'David K.', text: 'Is registration open to Year 1 students? I would love to mentor them.', time: '8 hrs ago' }
     ],
     time: '2 days ago'
   },
@@ -285,7 +286,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     hasUpvoted: false,
     hasReposted: false,
     comments: [
-      { id: 'ce1', authorName: 'Sarah T.', text: 'Count me in! I will bring the UX wireframe diagrams.', time: '1 day ago' }
+      { id: 'ce1', authorName: 'David K.', text: 'Count me in! I will bring the UX wireframe diagrams.', time: '1 day ago' }
     ],
     time: '3 days ago'
   }
@@ -327,10 +328,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (!file) return;
     try {
       setUploadingPostImage(true);
-      onToast('⏳ Uploading image to ImgBB cloud storage...');
+      onToast('⏳ Uploading image to cloud storage...');
       const url = await uploadToImgBB(file);
       setComposeImageUrl(url);
-      onToast('✓ Image attached via ImgBB!');
+      onToast('✓ Image attached via cloud storage!');
     } catch (err: any) {
       console.error(err);
       onToast(`Image upload failed: ${err.message}`);
@@ -379,6 +380,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [dmSearchText, setDmSearchText] = useState('');
   const [activeDMInput, setActiveDMInput] = useState('');
   const [showAddContactDropdown, setShowAddContactDropdown] = useState(false);
+  const [followedUsers, setFollowedUsers] = useState<Record<string, boolean>>({});
 
   // Alphabetically arranged member list from the forum
   const FORUM_MEMBERS = [
@@ -411,13 +413,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       ]
     },
     {
-      name: 'Sarah T.',
-      username: '@sarah_ux',
+      name: 'David K.',
+      username: '@david_ux',
       avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
       online: true,
       messages: [
         { id: '1', sender: 'them', text: 'Hey there! Did you check out the new tutorials in the learning center?', time: '10:14 AM', hearted: false, reactions: [] },
-        { id: '2', sender: 'me', text: 'Hey Sarah! Yes, just loaded the HTML Basics. It is super clean!', time: '10:16 AM', hearted: true, reactions: ['❤️'] },
+        { id: '2', sender: 'me', text: 'Hey David! Yes, just loaded the HTML Basics. It is super clean!', time: '10:16 AM', hearted: true, reactions: ['❤️'] },
         { id: '3', sender: 'them', text: 'Awesome! Let me know if you want to collaborate on the landing page layout.', time: '10:18 AM', hearted: false, reactions: [] }
       ]
     }
@@ -690,7 +692,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
 
     try {
-      await addDoc(collection(db, "posts"), newPostData);
+      await addDoc(collection(db, "posts"), cleanForFirestore(newPostData));
       setComposeText('');
       setComposeTitle('');
       setComposeCode('');
@@ -808,7 +810,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10B981&color=fff`,
       regNumber: 'BIT/2024/002',
       specialty: 'Student Member',
-      bio: 'Mount Kenya University IT Club active student member.',
+      bio: 'Active member of </AdvocoDe>.',
       techStack: ['React', 'JavaScript', 'Tailwind CSS'],
       streakDays: 4,
       points: 110,
@@ -847,9 +849,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         ]
       };
     }
-    if (name.includes('Sarah')) {
+    if (name.includes('David')) {
       return {
-        name: 'Sarah T.',
+        name: 'David K.',
         avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         regNumber: 'BIT/2024/4921',
         specialty: 'UI/UX Design Lead',
@@ -972,17 +974,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 <img 
                   src={currentUserAvatar} 
-                  alt="User menu" 
+                  alt="Menu" 
                   className="w-full h-full object-cover"
                 />
               </button>
               
               <div className="flex flex-col">
-                <h1 className="font-extrabold text-xs md:text-sm tracking-tight text-slate-900 font-display uppercase">
-                  Live Chat Rooms
+                <h1 className="font-extrabold text-sm md:text-base tracking-tight text-slate-900 font-mono">
+                  &lt;/AdvocoDe&gt;
                 </h1>
-                <p className="text-[9px] text-slate-400 font-extrabold tracking-wider uppercase">
-                  mount kenya university network
+                <p className="text-[9px] text-blue-600 font-extrabold tracking-wider uppercase font-mono">
+                  Defend. Develop. Dominate.
                 </p>
               </div>
             </div>
@@ -1015,7 +1017,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   const newState = !isDMWidgetExpanded;
                   setIsDMWidgetExpanded(newState);
                   if (newState && !activeDMMember) {
-                    setActiveDMMember('Sarah T.'); // Auto-load first chat
+                    setActiveDMMember(FORUM_MEMBERS[0]?.name || ''); // Auto-load first chat
                   }
                   onToast(newState ? 'Opening dedicated social messaging platform...' : 'Direct messages collapsed');
                 }}
@@ -1024,12 +1026,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     ? 'bg-[#008069] border-[#008069] text-white shadow-md shadow-emerald-500/10' 
                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
-                title="Open Direct Messages (WhatsApp / Telegram / Instagram Styles)"
+                title="Open Direct Messages"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[8px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white animate-bounce">
-                  3
-                </span>
               </button>
             </div>
           </div>
@@ -1110,7 +1109,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
             {uploadingPostImage && (
               <div className="flex items-center gap-2 p-2 bg-blue-50/50 rounded-xl border border-blue-200 text-xs text-blue-700 font-bold animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin" /> Uploading image to ImgBB cloud...
+                <Loader2 className="w-4 h-4 animate-spin" /> Uploading image to cloud...
               </div>
             )}
             {composeImageUrl && (
@@ -1146,22 +1145,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 >
                   <Sparkles className="w-4 h-4 text-indigo-500" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setComposeText((prev) => `${prev} 🚀`);
-                    onToast('Inserted emoji 🚀');
-                  }}
-                  className="p-2 rounded-full hover:bg-blue-50 active:scale-95 transition-all cursor-pointer"
-                  title="Insert emoji quick tag"
-                >
-                  <Smile className="w-4 h-4 text-amber-500" />
-                </button>
-
                 <label
                   htmlFor="post-image-upload"
                   className="p-2 rounded-full hover:bg-blue-50 active:scale-95 transition-all cursor-pointer text-emerald-600 flex items-center justify-center"
-                  title="Attach image (ImgBB)"
+                  title="Attach image"
                 >
                   <Image className="w-4 h-4" />
                   <input
@@ -1228,7 +1215,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   key={post.id} 
                   className={`transition-all ${
                     post.type === 'announcement' 
-                      ? 'border-l-4 border-rose-600 bg-rose-50/10 hover:bg-rose-50/15 shadow-md shadow-rose-500/5 my-3 mx-2 rounded-2xl border border-rose-200/50 p-1' 
+                      ? 'bg-blue-600 text-white shadow-xl my-3 mx-2 rounded-2xl border border-blue-500 p-1' 
                       : post.type === 'event' 
                       ? 'border-l-4 border-amber-500 bg-amber-50/10 hover:bg-amber-50/15 shadow-sm my-3 mx-2 rounded-2xl border border-amber-200/50 p-1' 
                       : 'border-transparent border-b border-slate-100 hover:bg-slate-50/40'
@@ -1254,8 +1241,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       
                       {/* Announcement Pinned Banner */}
                       {post.type === 'announcement' && (
-                        <div className="mb-2 bg-rose-600/15 text-rose-700 font-extrabold text-[10px] px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 uppercase tracking-wider border border-rose-600/20 w-max shadow-sm animate-pulse">
-                          <Megaphone className="w-3 h-3" />
+                        <div className="mb-2 bg-white/20 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 uppercase tracking-wider border border-white/30 w-max shadow-sm">
+                          <Megaphone className="w-3 h-3 text-white" />
                           OFFICIAL PINNED ANNOUNCEMENT
                         </div>
                       )}
@@ -1265,18 +1252,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <div className="flex items-baseline min-w-0 flex-wrap sm:flex-nowrap">
                           <span 
                             onClick={(e) => handleOpenBio(post.author.name, e)}
-                            className="font-bold text-slate-900 text-[14px] hover:underline cursor-pointer truncate"
+                            className={`font-bold text-[14px] hover:underline cursor-pointer truncate ${post.type === 'announcement' ? 'text-white' : 'text-slate-900'}`}
                           >
                             {post.author.name}
                           </span>
                           <span 
                             onClick={(e) => handleOpenBio(post.author.name, e)}
-                            className="text-slate-400 font-medium text-xs ml-1.5 cursor-pointer truncate"
+                            className={`font-medium text-xs ml-1.5 cursor-pointer truncate ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}
                           >
                             @{post.author.regNumber.replace(/\//g, '')}
                           </span>
-                          <span className="text-slate-300 mx-1.5 text-xs font-normal">•</span>
-                          <span className="text-slate-400 text-xs font-normal shrink-0">
+                          <span className={`mx-1.5 text-xs font-normal ${post.type === 'announcement' ? 'text-blue-200' : 'text-slate-300'}`}>•</span>
+                          <span className={`text-xs font-normal shrink-0 ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}>
                             {post.time}
                           </span>
                         </div>
@@ -1299,7 +1286,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full capitalize ${
                             post.type === 'code_share' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                             post.type === 'question' ? 'bg-amber-50 text-amber-700 border border-amber-150' :
-                            post.type === 'announcement' ? 'bg-red-50 text-red-700 border border-red-100' :
+                            post.type === 'announcement' ? 'bg-white/20 text-white border border-white/30 font-bold' :
                             post.type === 'event' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                             'bg-indigo-50 text-indigo-700 border border-indigo-150'
                           }`}>
@@ -1309,7 +1296,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
 
                           {post.title && (
-                            <span className={`text-[10px] font-extrabold tracking-tight ${post.type === 'announcement' ? 'text-rose-950 font-black text-xs' : 'text-slate-700'}`}>
+                            <span className={`text-[12px] font-black tracking-tight ${post.type === 'announcement' ? 'text-white font-extrabold text-sm' : 'text-slate-700 font-extrabold'}`}>
                               {post.title}
                             </span>
                           )}
@@ -1326,7 +1313,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       {/* Post Content text */}
                       <p className={`mt-1.5 leading-relaxed whitespace-pre-wrap font-sans ${
                         post.type === 'announcement' 
-                          ? 'text-[15px] font-black text-rose-950 tracking-normal' 
+                          ? 'text-[15px] font-bold text-white tracking-normal' 
                           : 'text-[14px] text-slate-800 font-medium'
                       }`}>
                         {renderWithMentions(post.content, onToast)}
@@ -1367,7 +1354,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       )}
 
                       {/* Bottom Action Icon Bar */}
-                      <div className="flex items-center justify-between max-w-md mt-4 text-slate-400 text-xs">
+                      <div className={`flex items-center justify-between max-w-md mt-4 text-xs ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}>
                         {/* Comments button */}
                         <button
                           onClick={(e) => {
@@ -1480,41 +1467,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 mr-2" />
           <input
             type="text"
-            placeholder="Search IT Hub feed..."
+            placeholder="Search feed..."
             onClick={() => onToast('Global searching timeline activated!')}
             className="bg-transparent text-xs w-full focus:outline-none placeholder-slate-400 text-slate-800 font-bold"
           />
-        </div>
-
-        {/* Trends Box */}
-        <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-blue-500" /> Trends for you
-            </h2>
-          </div>
-
-          <div className="space-y-3.5">
-            {[
-              { tag: '#MKUHackathon2026', desc: 'Trending in Science & Tech', count: '1.2K Posts' },
-              { tag: 'Sarah T.', desc: 'Trending in UI/UX Design', count: '841 Posts' },
-              { tag: '@google/genai', desc: 'Trending in AI Developer Kit', count: '312 Posts' },
-              { tag: '#TailwindCSSTips', desc: 'Trending in Web Design', count: '554 Posts' },
-            ].map((trend) => (
-              <div 
-                key={trend.tag} 
-                onClick={() => {
-                  setComposeText((prev) => `${prev} ${trend.tag}`);
-                  onToast(`Injected ${trend.tag} hashtag into compose!`);
-                }}
-                className="group cursor-pointer min-w-0"
-              >
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{trend.desc}</p>
-                <h3 className="text-xs font-extrabold text-slate-800 group-hover:text-blue-600 transition-colors mt-0.5">{trend.tag}</h3>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">{trend.count}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Who to Follow Box - Loaded from real authenticated Firestore users */}
@@ -1526,9 +1482,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="space-y-3.5">
             {allUsers && allUsers.length > 0 ? (
               allUsers.slice(0, 5).map((person) => {
-                const [following, setFollowing] = useState(false);
+                const personKey = person.uid || person.email || person.name;
+                const following = !!followedUsers[personKey];
                 return (
-                  <div key={person.uid || person.email || person.name} className="flex items-center justify-between gap-2.5">
+                  <div key={personKey} className="flex items-center justify-between gap-2.5">
                     <div 
                       onClick={(e) => handleOpenBio(person.name, e)}
                       className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 min-w-0"
@@ -1543,8 +1500,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     <button
                       onClick={() => {
-                        setFollowing(!following);
-                        onToast(following ? `Unfollowed ${person.name}` : `Following ${person.name}!`);
+                        const newStatus = !following;
+                        setFollowedUsers((prev) => ({ ...prev, [personKey]: newStatus }));
+                        onToast(newStatus ? `Following ${person.name}!` : `Unfollowed ${person.name}`);
                       }}
                       className={`px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm active:scale-95 transition-all cursor-pointer ${
                         following 

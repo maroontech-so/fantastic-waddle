@@ -1,4 +1,4 @@
-// Utility to upload images to ImgBB and return the URL
+// Utility to upload images to cloud storage and return the URL
 export const IMGBB_API_KEY = '227b454223cfd2b2e4b773a520ebb80d';
 
 export async function uploadToImgBB(file: File): Promise<string> {
@@ -11,13 +11,13 @@ export async function uploadToImgBB(file: File): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to upload image to ImgBB');
+    throw new Error('Failed to upload image to cloud storage');
   }
 
   const data = await response.json();
   if (data && data.success && data.data && (data.data.url || data.data.display_url)) {
     return data.data.url || data.data.display_url;
   } else {
-    throw new Error(data?.error?.message || 'Invalid response from ImgBB');
+    throw new Error(data?.error?.message || 'Invalid response from cloud server');
   }
 }

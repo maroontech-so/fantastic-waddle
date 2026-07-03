@@ -9,6 +9,7 @@ import { EditorView } from './components/EditorView';
 import { auth, db, googleProvider } from './firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, onSnapshot, query } from 'firebase/firestore';
+import { cleanForFirestore } from './utils/clean';
 
 import {
   INITIAL_NOTICES,
@@ -26,8 +27,20 @@ interface ToastItem {
 
 export default function App() {
   // Application states
-  const [user, setUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<string>('chat');
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [currentView, setCurrentView] = useState<string>(() => {
+    return sessionStorage.getItem('advocode_current_view') || 'chat';
+  });
+  useEffect(() => {
+    sessionStorage.setItem('advocode_current_view', currentView);
+  }, [currentView]);
   const [notices, setNotices] = useState<Notice[]>(INITIAL_NOTICES);
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
   const [folders, setFolders] = useState<LibraryFolder[]>(INITIAL_FOLDERS);
@@ -80,14 +93,15 @@ export default function App() {
           if (docSnap.exists()) {
             const userData = { uid: firebaseUser.uid, ...docSnap.data() } as User;
             setUser(userData);
-            sessionStorage.setItem('mku_it_user', JSON.stringify(userData));
+            sessionStorage.setItem('advocode_user', JSON.stringify(userData));
           } else {
             const defaultUser: User = {
               uid: firebaseUser.uid,
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'MKU Student',
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'AdvocoDe Member',
               email: firebaseUser.email || '',
-              regNumber: 'BIT/2026/' + firebaseUser.uid.substring(0, 4).toUpperCase(),
-              bio: 'Student Member • Mount Kenya University IT Club',
+              username: '@' + (firebaseUser.email?.split('@')[0] || 'dev_' + firebaseUser.uid.substring(0, 4).toLowerCase()),
+              regNumber: 'ADV/' + firebaseUser.uid.substring(0, 4).toUpperCase(),
+              bio: 'Developer • </AdvocoDe> Network',
               skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase'],
               avatarUrl: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'User')}&background=2563EB&color=fff`,
               xp: 50,
@@ -98,15 +112,16 @@ export default function App() {
               learningCount: 1,
               engagementCount: 1,
             };
-            await setDoc(docRef, defaultUser, { merge: true });
+            await setDoc(docRef, cleanForFirestore(defaultUser), { merge: true });
             setUser(defaultUser);
-            sessionStorage.setItem('mku_it_user', JSON.stringify(defaultUser));
+            sessionStorage.setItem('advocode_user', JSON.stringify(defaultUser));
           }
         } catch (err) {
           console.error("Error fetching user profile from Firestore:", err);
         }
       } else {
         setUser(null);
+        sessionStorage.removeItem('advocode_user');
         sessionStorage.removeItem('mku_it_user');
       }
     });
@@ -149,10 +164,11 @@ export default function App() {
       } else {
         const newUserProfile: User = {
           uid: fbUser.uid,
-          name: fbUser.displayName || fbUser.email?.split('@')[0] || 'MKU Student',
+          name: fbUser.displayName || fbUser.email?.split('@')[0] || 'AdvocoDe Member',
           email: fbUser.email || '',
-          regNumber: 'BIT/2026/' + fbUser.uid.substring(0, 4).toUpperCase(),
-          bio: 'Student Member • Mount Kenya University IT Club',
+          username: '@' + (fbUser.email?.split('@')[0] || 'dev_' + fbUser.uid.substring(0, 4).toLowerCase()),
+          regNumber: 'ADV/' + fbUser.uid.substring(0, 4).toUpperCase(),
+          bio: 'Developer • </AdvocoDe> Network',
           skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase', 'Google Cloud'],
           avatarUrl: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'User')}&background=2563EB&color=fff`,
           xp: 75,
@@ -163,9 +179,9 @@ export default function App() {
           learningCount: 1,
           engagementCount: 1,
         };
-        await setDoc(docRef, newUserProfile, { merge: true });
+        await setDoc(docRef, cleanForFirestore(newUserProfile), { merge: true });
         setUser(newUserProfile);
-        triggerToast(`Welcome to MKU IT Club, ${newUserProfile.name}! +75 XP!`);
+        triggerToast(`Welcome to </AdvocoDe>, ${newUserProfile.name}! +75 XP!`);
       }
     } catch (err: any) {
       console.error("Google Sign-In Error:", err);
@@ -203,10 +219,11 @@ export default function App() {
         } else {
           const fallbackProfile: User = {
             uid: fbUser.uid,
-            name: fbUser.displayName || authEmail.split('@')[0] || 'MKU Student',
+            name: fbUser.displayName || authEmail.split('@')[0] || 'AdvocoDe Member',
             email: authEmail,
-            regNumber: 'BIT/2026/' + fbUser.uid.substring(0, 4).toUpperCase(),
-            bio: 'Student Member • Mount Kenya University IT Club',
+            username: '@' + (authEmail.split('@')[0] || 'dev_' + fbUser.uid.substring(0, 4).toLowerCase()),
+            regNumber: 'ADV/' + fbUser.uid.substring(0, 4).toUpperCase(),
+            bio: 'Developer • </AdvocoDe> Network',
             skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase'],
             avatarUrl: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'User')}&background=2563EB&color=fff`,
             xp: 50,
@@ -217,7 +234,7 @@ export default function App() {
             learningCount: 1,
             engagementCount: 1,
           };
-          await setDoc(docRef, fallbackProfile, { merge: true });
+          await setDoc(docRef, cleanForFirestore(fallbackProfile), { merge: true });
           setUser(fallbackProfile);
           triggerToast(`Welcome back!`);
         }
@@ -229,10 +246,11 @@ export default function App() {
         }
         const newUserProfile: User = {
           uid: fbUser.uid,
-          name: authName.trim() || authEmail.split('@')[0] || 'MKU Student',
+          name: authName.trim() || authEmail.split('@')[0] || 'AdvocoDe Member',
           email: authEmail,
-          regNumber: authRegNumber.trim() || 'BIT/2026/' + fbUser.uid.substring(0, 4).toUpperCase(),
-          bio: 'Student Member • Mount Kenya University IT Club',
+          username: authRegNumber.trim().startsWith('@') ? authRegNumber.trim() : '@' + (authRegNumber.trim() || authEmail.split('@')[0] || 'dev'),
+          regNumber: 'ADV/' + fbUser.uid.substring(0, 4).toUpperCase(),
+          bio: 'Developer • </AdvocoDe> Network',
           skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase'],
           avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authName.trim() || 'User')}&background=2563EB&color=fff`,
           xp: 50,
@@ -243,9 +261,9 @@ export default function App() {
           learningCount: 1,
           engagementCount: 1,
         };
-        await setDoc(doc(db, "users", fbUser.uid), newUserProfile, { merge: true });
+        await setDoc(doc(db, "users", fbUser.uid), cleanForFirestore(newUserProfile), { merge: true });
         setUser(newUserProfile);
-        triggerToast(`Welcome to the IT Club, ${newUserProfile.name}! +50 XP!`);
+        triggerToast(`Welcome to </AdvocoDe>, ${newUserProfile.name}! +50 XP!`);
       }
       setAuthEmail('');
       setAuthPassword('');
@@ -286,9 +304,9 @@ export default function App() {
         engagementCount: type === 'engagement' ? engagementCount + 1 : engagementCount,
       };
       
-      sessionStorage.setItem('mku_it_user', JSON.stringify(updated));
+      sessionStorage.setItem('advocode_user', JSON.stringify(updated));
       if (updated.uid || auth.currentUser?.uid) {
-        setDoc(doc(db, "users", updated.uid || auth.currentUser!.uid), updated, { merge: true }).catch(err => console.error(err));
+        setDoc(doc(db, "users", updated.uid || auth.currentUser!.uid), cleanForFirestore(updated), { merge: true }).catch(err => console.error(err));
       }
       
       if (isLevelUp) {
@@ -305,6 +323,7 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
+      sessionStorage.removeItem('advocode_user');
       sessionStorage.removeItem('mku_it_user');
       setUser(null);
       setCurrentView('chat');
@@ -348,34 +367,14 @@ export default function App() {
       ...prev,
       [channelId]: [...(prev[channelId] || []), newMessage],
     }));
-
-    // Trigger dummy smart responses on channel chats for immersive feel!
-    if (text.toLowerCase().includes('help') || text.toLowerCase().includes('react') || text.toLowerCase().includes('gcp')) {
-      setTimeout(() => {
-        const dummyReply: ChatMessage = {
-          id: `msg_reply_${Date.now()}`,
-          channelId,
-          sender: 'Sarah T.',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `Awesome, that sounds like a great point! I suggest checking the Resources tab for the related notes. Let's discuss it at Lab 4 later.`,
-          self: false,
-        };
-
-        setChatHistory((prev) => ({
-          ...prev,
-          [channelId]: [...(prev[channelId] || []), dummyReply],
-        }));
-        triggerToast('New message in #' + channelId);
-      }, 2500);
-    }
   };
 
   // Update Profile details
   const handleUpdateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    sessionStorage.setItem('mku_it_user', JSON.stringify(updatedUser));
+    sessionStorage.setItem('advocode_user', JSON.stringify(updatedUser));
     if (updatedUser.uid || auth.currentUser?.uid) {
-      setDoc(doc(db, "users", updatedUser.uid || auth.currentUser!.uid), updatedUser, { merge: true }).catch(err => console.error(err));
+      setDoc(doc(db, "users", updatedUser.uid || auth.currentUser!.uid), cleanForFirestore(updatedUser), { merge: true }).catch(err => console.error(err));
     }
   };
 
@@ -404,8 +403,8 @@ export default function App() {
           <div className="w-24 h-24 bg-blue-600 rounded-3xl shadow-lg flex items-center justify-center mb-6 animate-pulse">
             <Code2 className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white font-display">MKU IT Club</h1>
-          <p className="text-blue-400 mt-3 font-semibold text-lg tracking-wide">Connect. Learn. Build.</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-white font-mono">&lt;/AdvocoDe&gt;</h1>
+          <p className="text-blue-400 mt-3 font-bold text-base tracking-wide font-mono uppercase">Defend. Develop. Dominate.</p>
         </div>
       )}
 
@@ -421,7 +420,7 @@ export default function App() {
                 {isLoginMode ? 'Welcome Back' : 'Create Account'}
               </h1>
               <p className="text-slate-600 font-medium">
-                {isLoginMode ? 'Sign in to access your community.' : 'Join the MKU IT club network.'}
+                {isLoginMode ? 'Sign in to access your developer network.' : 'Join </AdvocoDe> developer network.'}
               </p>
             </div>
 
@@ -441,70 +440,6 @@ export default function App() {
                 </svg>
                 <span>Continue with Google</span>
               </button>
-
-              {/* Domain Whitelist Guide for Google Auth */}
-              <div className="mt-3 bg-amber-50/90 border border-amber-200 rounded-2xl p-3.5 text-slate-800 transition-all shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setShowDomainHelp(!showDomainHelp)}
-                  className="w-full flex items-center justify-between text-left font-bold text-xs text-amber-900 cursor-pointer"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Google Sign-In Domain Setup Guide</span>
-                  </span>
-                  <span className="text-[10px] bg-amber-200/70 px-2 py-0.5 rounded-full font-semibold text-amber-900">
-                    {showDomainHelp ? 'Hide Guide' : 'Whitelist Domains'}
-                  </span>
-                </button>
-
-                {showDomainHelp && (
-                  <div className="mt-3 pt-2.5 border-t border-amber-200/80 space-y-2.5 text-xs">
-                    <p className="text-amber-950 font-medium leading-relaxed">
-                      To prevent <span className="font-mono bg-amber-100 px-1 rounded text-[11px] font-bold text-red-600">auth/unauthorized-domain</span> errors, copy and add these domains in your <b>Firebase Console ➔ Authentication ➔ Settings ➔ Authorized Domains</b>:
-                    </p>
-
-                    <div className="space-y-2 my-2">
-                      {[
-                        { label: 'Current Active Hostname', value: window.location.hostname },
-                        { label: 'Development Preview Domain', value: 'ais-dev-y2qgk6zubib6y3ghp7h6d7-957922336523.europe-west2.run.app' },
-                        { label: 'Shared App Domain', value: 'ais-pre-y2qgk6zubib6y3ghp7h6d7-957922336523.europe-west2.run.app' },
-                      ].map((item) => (
-                        <div key={item.label} className="bg-white border border-amber-200/90 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wide">{item.label}</div>
-                            <div className="font-mono text-[11px] text-slate-800 truncate font-semibold select-all mt-0.5" title={item.value}>{item.value}</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyDomain(item.value)}
-                            className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1.5 rounded-lg text-[11px] flex items-center gap-1 transition-colors shrink-0 cursor-pointer"
-                          >
-                            {copiedDomain === item.value ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-green-600" />
-                                <span className="text-green-700">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-blue-900 text-[11px] flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                      <span>
-                        <b>Tip:</b> Email & Password login below works immediately without needing domain whitelisting!
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
               
               <div className="relative my-4 flex items-center justify-center">
                 <div className="border-t border-slate-200 w-full"></div>
@@ -526,14 +461,14 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Registration Number</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Unique Username</label>
                     <input
                       required
                       type="text"
                       value={authRegNumber}
                       onChange={(e) => setAuthRegNumber(e.target.value)}
-                      placeholder="BIT/123/2024"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-mono uppercase"
+                      placeholder="@developer"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -541,13 +476,13 @@ export default function App() {
 
               {/* Standard email/pass */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Student Email</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Email Address</label>
                 <input
                   required
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="student@mku.ac.ke"
+                  placeholder="developer@advocode.io"
                   className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
                 />
               </div>

@@ -34,6 +34,7 @@ import tutorialData from '../tutorial.json';
 import { getTemplateForTopic, getAllLessonsFromTutorial } from '../utils/tutorialSandbox';
 import { db, auth } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { cleanForFirestore } from '../utils/clean';
 
 
 interface SavedSnippet {
@@ -66,7 +67,7 @@ const TEMPLATES = [
   },
   {
     title: 'Semantic HTML5 Card',
-    html: `<article class="profile-card">\n  <header class="card-header">\n    <span class="badge">PRO STUDENT</span>\n    <h2>Alex M.</h2>\n  </header>\n  <p class="bio">Passionate frontend developer & cloud enthusiast building interactive apps at Mount Kenya University.</p>\n  <footer class="card-footer">\n    <button id="like-btn">❤️ Like <span id="count">14</span></button>\n  </footer>\n</article>`,
+    html: `<article class="profile-card">\n  <header class="card-header">\n    <span class="badge">PRO STUDENT</span>\n    <h2>Alex M.</h2>\n  </header>\n  <p class="bio">Passionate frontend developer & cloud enthusiast building interactive apps at &lt;/AdvocoDe&gt;.</p>\n  <footer class="card-footer">\n    <button id="like-btn">❤️ Like <span id="count">14</span></button>\n  </footer>\n</article>`,
     css: `body {\n  margin: 0;\n  background: #f8fafc;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  font-family: 'Inter', system-ui, -apple-system, sans-serif;\n}\n.profile-card {\n  background: white;\n  border: 1px solid #e2e8f0;\n  border-radius: 20px;\n  padding: 24px;\n  max-width: 320px;\n  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);\n}\n.card-header {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  margin-bottom: 12px;\n}\n.badge {\n  align-self: flex-start;\n  background: #eff6ff;\n  color: #2563eb;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 4px 10px;\n  border-radius: 99px;\n  letter-spacing: 1px;\n}\nh2 {\n  margin: 0;\n  color: #0f172a;\n  font-size: 20px;\n}\n.bio {\n  color: #64748b;\n  font-size: 13.5px;\n  line-height: 1.5;\n  margin: 0 0 20px 0;\n}\n#like-btn {\n  background: #f1f5f9;\n  border: none;\n  padding: 10px 16px;\n  border-radius: 12px;\n  font-weight: 700;\n  color: #334155;\n  cursor: pointer;\n  transition: all 0.2s;\n  width: 100%;\n}\n#like-btn:hover {\n  background: #e2e8f0;\n  transform: translateY(-1px);\n}`,
     js: `let count = 14;\nconst btn = document.getElementById('like-btn');\nconst display = document.getElementById('count');\n\nbtn.addEventListener('click', () => {\n  count++;\n  display.textContent = count;\n  btn.style.background = '#fee2e2';\n  btn.style.color = '#dc2626';\n  setTimeout(() => {\n    btn.style.background = '#f1f5f9';\n    btn.style.color = '#334155';\n  }, 300);\n});`
   },
@@ -464,7 +465,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
     const postMessage = shareText.trim() || `Check out my awesome project "${title}" in LM IDE! 🚀`;
     
     let user = { name: auth.currentUser?.displayName || 'Alex M.', regNumber: 'BIT/2024/001' };
-    const uData = sessionStorage.getItem('mku_it_user');
+    const uData = sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
     if (uData) {
       try { user = JSON.parse(uData); } catch (e) {}
     }
@@ -495,7 +496,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
     };
 
     try {
-      await addDoc(collection(db, "posts"), newPostData);
+      await addDoc(collection(db, "posts"), cleanForFirestore(newPostData));
       onToast('✓ Project successfully published to the Firestore Engagement Hub timeline!');
       setIsShareModalOpen(false);
     } catch (err: any) {

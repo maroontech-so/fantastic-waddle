@@ -3,7 +3,9 @@ export interface User {
   id?: string;
   name: string;
   email: string;
-  regNumber: string;
+  username?: string;
+  regNumber?: string;
+  coverUrl?: string;
   bio: string;
   skills: string[];
   avatarUrl?: string;

@@ -52,7 +52,7 @@ export const INITIAL_FILES: LibraryFile[] = [
     name: 'React_Hooks_Cheatsheet.pdf',
     size: '2.4 MB',
     type: 'pdf',
-    uploader: 'Sarah T.',
+    uploader: 'David K.',
     time: '2 hrs ago',
     category: 'Web Development',
   },
@@ -96,7 +96,7 @@ export const INITIAL_FILES: LibraryFile[] = [
 
 export const INITIAL_CHANNELS: Channel[] = [
   // Community Group Channels
-  { id: 'general', name: 'general', description: 'General announcements and friendly banter', unreadCount: 3, isDM: false },
+  { id: 'general', name: 'general', description: 'General announcements and friendly banter', unreadCount: 0, isDM: false },
   { id: 'help-frontend', name: 'help-frontend', description: 'Ask questions and debug CSS, HTML, React, etc.', unreadCount: 0, isDM: false },
   { id: 'opportunities', name: 'opportunities', description: 'Jobs, internships, hackathons, and scholarship listings', unreadCount: 0, isDM: false },
   { id: 'web-dev-syllabus', name: 'web-dev-syllabus', description: 'Discuss the 10-Part Zero-to-Expert Web Dev Curriculum & get code help', unreadCount: 5, isDM: false },
@@ -114,8 +114,8 @@ export const INITIAL_CHANNELS: Channel[] = [
     regNumber: 'AI/2026/GEMINI',
   },
   {
-    id: 'dm-sarah',
-    name: 'Sarah T. (UX Lead)',
+    id: 'dm-david',
+    name: 'David K. (UX Lead)',
     description: 'Typing...',
     unreadCount: 1,
     isDM: true,
@@ -164,7 +164,7 @@ export const INITIAL_CHAT_HISTORY: Record<string, ChatMessage[]> = {
     {
       id: 'm1',
       channelId: 'general',
-      sender: 'Sarah T.',
+      sender: 'David K.',
       time: '10:40 AM',
       text: "Hey everyone! Does anyone have the notes from yesterday's intro to React meeting? I had to leave early.",
       self: false,
@@ -245,7 +245,7 @@ export const INITIAL_CHAT_HISTORY: Record<string, ChatMessage[]> = {
     {
       id: 'ws2',
       channelId: 'web-dev-syllabus',
-      sender: 'Sarah T.',
+      sender: 'David K.',
       time: '09:15 AM',
       text: "Just completed Chapter 3.1 on Semantic HTML5! The difference between <article> and <section> makes so much sense now. You can try the starter card template right in the editor!",
       self: false,
@@ -266,22 +266,22 @@ export const INITIAL_CHAT_HISTORY: Record<string, ChatMessage[]> = {
       channelId: 'dm-ai-tutor',
       sender: 'Gemini AI Tutor ⚡',
       time: 'Now',
-      text: "Hello Alex! I am your interactive AI Course Tutor for Mount Kenya University's IT Club. Ask me anything about our 10-part syllabus (HTML5, CSS Grid, DOM Manipulation, LocalStorage, or Capstone Projects), or ask me to explain any code snippet from the tutorial!",
+      text: "Hello Alex! I am your interactive AI Course Tutor for </AdvocoDe>. Ask me anything about our 10-part syllabus (HTML5, CSS Grid, DOM Manipulation, LocalStorage, or Capstone Projects), or ask me to explain any code snippet from the tutorial!",
       self: false,
     },
   ],
-  'dm-sarah': [
+  'dm-david': [
     {
       id: 'dm1_1',
-      channelId: 'dm-sarah',
-      sender: 'Sarah T. (UX Lead)',
+      channelId: 'dm-david',
+      sender: 'David K. (UX Lead)',
       time: 'Yesterday 4:20 PM',
       text: 'Hey Alex! Did you manage to test the prototype of the new club App UI?',
       self: false,
     },
     {
       id: 'dm1_2',
-      channelId: 'dm-sarah',
+      channelId: 'dm-david',
       sender: 'Alex M.',
       time: 'Yesterday 4:22 PM',
       text: 'Yes! It looks outstanding. The colors are very professional, especially the Android drawer and navigation details.',
@@ -290,16 +290,16 @@ export const INITIAL_CHAT_HISTORY: Record<string, ChatMessage[]> = {
     },
     {
       id: 'dm1_3',
-      channelId: 'dm-sarah',
-      sender: 'Sarah T. (UX Lead)',
+      channelId: 'dm-david',
+      sender: 'David K. (UX Lead)',
       time: 'Yesterday 4:25 PM',
       text: 'Awesome, thanks! I am working on the chat system right now. Want it to look exactly like WhatsApp!',
       self: false,
     },
     {
       id: 'dm1_4',
-      channelId: 'dm-sarah',
-      sender: 'Sarah T. (UX Lead)',
+      channelId: 'dm-david',
+      sender: 'David K. (UX Lead)',
       time: '09:12 AM',
       text: 'Can we sync today to finalize the Hackathon registration page?',
       self: false,

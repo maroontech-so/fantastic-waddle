@@ -63,7 +63,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     hasUpvoted: false,
     comments: [
       { id: 'c1', authorName: 'Alex M.', text: 'This is brilliant! Solving state flash loads is critical. Using this in my project.', time: '2 hrs ago' },
-      { id: 'c2', authorName: 'Sarah T.', text: 'Extremely clean code, Mike! Perfect use of lazy initialization.', time: '1 hr ago' }
+      { id: 'c2', authorName: 'David K.', text: 'Extremely clean code, Mike! Perfect use of lazy initialization.', time: '1 hr ago' }
     ],
     time: '3 hours ago'
   },
@@ -73,7 +73,7 @@ const DEFAULT_POSTS: EngagementPost[] = [
     content: 'Working on the upcoming Hackathon registration mobile layouts. Should form inputs default to 16px font-size on iOS to prevent auto-zooming, or stick to 14px with responsive scale? What are your thoughts?',
     type: 'question',
     author: {
-      name: 'Sarah T. (UX Lead)',
+      name: 'David K. (UX Lead)',
       avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
       regNumber: 'BIT/2024/4921',
       specialty: 'UI/UX Design Lead',
@@ -205,7 +205,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
         name: currentUser?.name || 'Alex M.',
         regNumber: currentUser?.regNumber || 'BIT/2026/001',
         specialty: currentUser?.skills?.join(' & ') || 'Fullstack Developer',
-        bio: currentUser?.bio || 'Passionate student member of Mount Kenya University IT Club',
+        bio: currentUser?.bio || 'Passionate member of </AdvocoDe>',
         techStack: currentUser?.skills || ['React', 'TypeScript', 'Tailwind'],
         streakDays: 9,
         points: 150,
