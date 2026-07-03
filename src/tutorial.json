@@ -1,0 +1,2029 @@
+{
+  "course": {
+    "title": "The Complete Zero-to-Expert HTML, CSS, and JavaScript Unified Course",
+    "subtitle": "A seamless, exhaustive, and practical guide that treats the browser's three languages as one living ecosystem. No shortcuts, no summaries—only deep, applicable knowledge.",
+    "parts": [
+      {
+        "part_number": 0,
+        "part_title": "THE WORKSHOP",
+        "description": "Before you write a single character of code, you must understand the tools, the environment, and the invisible handshake that happens between your files and the browser.",
+        "chapters": [
+          {
+            "chapter_number": 1,
+            "chapter_title": "Setting Up Your Digital Canvas",
+            "topics": [
+              {
+                "topic": "1.1 What is a Web Browser?",
+                "explanation": "A web browser (Chrome, Firefox, Edge, Safari) is not a magical device; it is a highly sophisticated piece of software whose primary job is to read text files (written in HTML, CSS, and JavaScript) and render them into the visual, interactive pages we see. When you type a URL, the browser sends a request across the internet to a server, receives a stream of text (the code), and parses that text line-by-line. It builds a mental model of the page (the DOM), applies styles, executes logic, and paints pixels on your screen. Every browser has a built-in 'Developer Tools' panel (F12 or right-click 'Inspect')—this is your cockpit. It shows you the live code, the errors, the network requests, and the performance metrics. For our entire journey, Google Chrome is recommended because its DevTools are considered the industry standard.",
+                "use_case": "Imagine you are a translator. The browser is the translator that takes the document written in a foreign language (code) and speaks it aloud (displays it) to the end-user. Understanding this prevents the 'it works on my machine' syndrome.",
+                "example": "Open Chrome. Go to any website (e.g., Wikipedia). Right-click anywhere on the blank space and select 'Inspect'. A panel will open showing you the raw HTML. This is the 'skeleton' the browser is reading. If you hover over the lines of HTML in the DevTools, the corresponding sections on the page will highlight. This proves the browser is mapping text to visuals."
+              },
+              {
+                "topic": "1.2 What is a Text Editor?",
+                "explanation": "A text editor is where you will write your code. It is not a word processor like Microsoft Word (which adds hidden formatting characters). It is a plain-text environment. We will use Visual Studio Code (VS Code) because it is free, lightning-fast, and has an ecosystem of 'extensions' that act like power-ups. Extensions like 'Prettier' (automatic formatting), 'Live Server' (auto-refresh the browser when you save), and 'ESLint' (catches errors as you type) will transform you from a beginner into a productive developer. You must also learn the basics of the VS Code interface: the Explorer (file tree), the Search, the Source Control (Git), and the Extensions marketplace.",
+                "use_case": "In your first week, you will write hundreds of tags. Syntax highlighting (colors for different parts of the code) in VS Code prevents you from making typos because you can visually see if a string is the wrong color.",
+                "example": "Open VS Code. Create a new file and save it as `index.html`. Type the word `html` and hit 'Tab' – VS Code has an 'Emmet' feature that instantly generates the full HTML boilerplate. This is your first automation. Now, install the 'Live Server' extension. Right-click on your `index.html` and select 'Open with Live Server'. A browser tab opens, and every time you save your file (Ctrl+S), the browser updates instantly without you hitting refresh."
+              },
+              {
+                "topic": "1.3 The File System: Folders, Paths, and Extensions",
+                "explanation": "Your code lives in a hierarchy of folders (directories). The `.html` extension tells the computer 'this is a web page'. The `.css` extension tells the computer 'this is a style sheet'. The `.js` extension tells the computer 'this is a script'. Understanding paths is crucial for linking these files together. An 'Absolute Path' is the full address from the root of your computer (e.g., `C:/Users/John/Projects/photo.png`), which is fragile and breaks when you move your project. A 'Relative Path' is the address from your current file's location (e.g., `images/photo.png` or `../styles/theme.css`). The `..` means 'go up one folder'. This is the professional standard because you can zip your entire project folder, send it to a friend, and all links will still work because the relative relationships remain unchanged.",
+                "use_case": "If you have a 'Projects' folder, inside it you have 'MyWebsite'. Inside 'MyWebsite', you have `index.html` and a folder named 'assets'. Inside 'assets', you have `style.css` and a 'img' subfolder. To link your CSS from `index.html`, you write `<link rel='stylesheet' href='assets/style.css'>`. To refer to an image from your CSS, if the CSS is in 'assets', you write `url('img/background.jpg')`.",
+                "example": "Create a folder on your desktop called `MyFirstSite`. Inside it, create `index.html`. Create a subfolder called `styles`. Inside `styles`, create `main.css`. Create another subfolder called `scripts` and inside it, `app.js`. In your `index.html`, you will link them with `<link rel='stylesheet' href='styles/main.css'>` and `<script src='scripts/app.js'></script>`. This organizes your project like a professional."
+              },
+              {
+                "topic": "1.4 Your First File: Creating index.html and Viewing Locally",
+                "explanation": "`index.html` is the default name that web servers look for when a user visits a root directory (e.g., `www.example.com`). It is the entry point to your application. When you save this file and double-click it, your operating system opens it in your default browser using the `file://` protocol. This is fine for local testing, but it restricts certain features (like fetching local JSON files) due to CORS (Cross-Origin Resource Sharing) policies. That's why we use the 'Live Server' extension in VS Code—it spins up a local `http://` server (like a mini web server on your machine), making your environment behave exactly like a real web server.",
+                "use_case": "You will use `index.html` as your main page. If you were building a portfolio, this would be your landing page. If you have subpages, they can be named `about.html`, `contact.html`, etc., but the root always reads `index.html`.",
+                "example": "Open VS Code, create a new file, and type the following exactly:\n\n<!DOCTYPE html>\n<html>\n  <head>\n    <title>My First Page</title>\n  </head>\n  <body>\n    <h1>Hello, World!</h1>\n    <p>This is my first webpage.</p>\n  </body>\n</html>\n\nSave as `index.html`. Right-click and open with Live Server. The browser will show 'Hello, World!' in large text and the paragraph underneath. You have just built your first web page."
+              },
+              {
+                "topic": "1.5 Understanding the Three-Language Handshake",
+                "explanation": "This is the most critical concept for a layman to grasp. HTML, CSS, and JavaScript are not three separate applications; they are three layers of a single house. **HTML (HyperText Markup Language)** is the structural skeleton—the wooden studs, the concrete foundation, the doors and windows. **CSS (Cascading Style Sheets)** is the interior design—the paint, the wallpaper, the lighting, and the arrangement of furniture. **JavaScript** is the electricity and plumbing—it makes the lights turn on when you flip a switch, the water flow when you turn a handle, and the garage door open when you press a button. The browser loads the HTML first, starts building the skeleton, sees a `<link>` or `<style>` tag and says, 'I need to paint this skeleton,' then sees a `<script>` tag and says, 'I need to install the wiring.' They all collaborate on the same 'Document' (the DOM).",
+                "use_case": "When you click a 'Dark Mode' button (JavaScript), it doesn't recreate the page. It simply changes the `class` on the `<body>` tag. The CSS has a rule like `.dark-mode { background: black; }` that uses that class to repaint the house. The HTML structure remains untouched. This seamless collaboration is the key to modern web development.",
+                "example": "Create this in `index.html` to see the handshake live:\n\n<button onclick=\"document.body.style.background = 'black';\">Dark</button>\n<button onclick=\"document.body.style.background = 'white';\">Light</button>\n\n<style>\n  body { transition: background 0.5s; font-family: Arial; }\n  button { padding: 10px; border-radius: 5px; }\n</style>\n\nClick the buttons. The HTML provides the button structure, the CSS makes it look good and animates the transition, and the JavaScript (inlined in `onclick`) handles the logic of changing the color. You have just used all three languages in one line."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 1,
+        "part_title": "THE STRUCTURE (HTML - The Skeleton & Vocabulary)",
+        "description": "You will now learn every single HTML element you will ever need. We treat HTML as the foundational vocabulary. You will build precise, semantic, and accessible structures.",
+        "chapters": [
+          {
+            "chapter_number": 2,
+            "chapter_title": "The Bare-Bones HTML Template",
+            "topics": [
+              {
+                "topic": "2.1 The `<!DOCTYPE html>` Declaration",
+                "explanation": "This is the first line of any HTML document. It's not a tag; it's an instruction to the browser. It tells the browser 'Please render this page in Standards Mode' as opposed to Quirks Mode (which was used for legacy pages from the 1990s). Without this, the browser might try to interpret your modern CSS using outdated box-model rules, breaking your layout. It is case-insensitive, but the convention is to write it exactly as `<!DOCTYPE html>`. Always put it first, before anything else, even the `<html>` tag.",
+                "use_case": "If you ever forget the doctype, you will notice mysterious 3-4px gaps around your images or margins that you cannot explain. It is the single most common beginner mistake.",
+                "example": "Always start your file with:\n\n<!DOCTYPE html>\n<html>\n...\n</html>\n\nNever put any text or whitespace above it. The browser strictly expects this first."
+              },
+              {
+                "topic": "2.2 The `<html>` Root Element and the `lang` Attribute",
+                "explanation": "The `<html>` tag wraps the entire content of your page. It is the root container. Inside it, you will have exactly two children: the `<head>` and the `<body>`. The `lang` attribute (e.g., `lang='en'` for English) is a crucial accessibility and SEO feature. It tells screen readers which pronunciation dictionary to use and tells search engines which language your content is in. If you write `lang='fr'`, a French screen reader will pronounce the words with a French accent, dramatically improving comprehension for visually impaired users.",
+                "use_case": "If you are building a multilingual site, you might serve different HTML files with different `lang` attributes, or you might use JavaScript to dynamically change it, but the static attribute on the `<html>` tag is the foundational signal.",
+                "example": "<!DOCTYPE html>\n<html lang='en'>\n  ...\n</html>\n\nIf you are in Kenya and writing in Swahili, you would use `<html lang='sw'>`."
+              },
+              {
+                "topic": "2.3 The `<head>`: Metadata, `<title>`, and `<meta>`",
+                "explanation": "The `<head>` is the 'brain' of the document. Everything inside it is invisible to the user's eyes but vital for the browser, search engines, and social media scrapers. The `<title>` tag is the only mandatory title element; it defines the text that appears in the browser tab, the history dropdown, and the search engine result headline. The `<meta charset='UTF-8'>` tag ensures that your page can display any character from any language (emojis, accents, Chinese characters). The `<meta name='viewport' content='width=device-width, initial-scale=1.0'>` is non-negotiable for mobile responsiveness—it tells the mobile browser to set the page width to the device's screen width and not to zoom out by default.",
+                "use_case": "If you omit the viewport meta tag, your beautifully designed site will look like a tiny desktop page zoomed out on a phone, forcing users to pinch and zoom. This is a cardinal sin in modern web development.",
+                "example": "<head>\n  <meta charset='UTF-8'>\n  <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n  <title>My Awesome E-Commerce Store</title>\n  <meta name='description' content='Buy the best handmade crafts from Kenya'>\n</head>"
+              },
+              {
+                "topic": "2.4 The `<body>`: Where all visible magic happens",
+                "explanation": "The `<body>` is the stage. Everything you put inside the body is what the user sees, touches, clicks, and scrolls over. The `background` or `bgcolor` attribute is outdated—we use CSS for that. But the body is also the primary target for JavaScript event listeners (like tracking scroll depth or global clicks). It represents the entire viewport area. Any element that is not in the body is not rendered.",
+                "use_case": "When you want to add a global 'back to top' button or a floating chat widget, you will append it as the last child of the `<body>` so it sits on top of everything else.",
+                "example": "<body>\n  <header>This is my navigation</header>\n  <main>This is my main content</main>\n  <footer>This is my footer</footer>\n</body>"
+              },
+              {
+                "topic": "2.5 Comments in HTML",
+                "explanation": "Comments are notes you write to yourself or your team. They are not rendered in the browser. In HTML, comments are written as `<!-- This is a comment -->`. You should use comments to explain complex sections, mark the end of large closing tags, or temporarily disable a piece of code for debugging. Over-commenting is bad (your code should be self-documenting), but under-commenting is worse. A rule of thumb: comment on the 'why' and the 'what', not the 'how'.",
+                "use_case": "When you have a deeply nested `<div>` structure, place a comment like `<!-- /.container -->` after the closing `</div>` to know exactly which block you are closing.",
+                "example": "<!-- Main Navigation Bar -->\n<nav>\n  <ul>\n    <li><a href='#home'>Home</a></li>\n  </ul>\n</nav>\n<!-- End of Navigation -->"
+              }
+            ]
+          },
+          {
+            "chapter_number": 3,
+            "chapter_title": "Text, Headings, and Semantic Flow",
+            "topics": [
+              {
+                "topic": "3.1 Headings: `<h1>` through `<h6>`",
+                "explanation": "Headings are the outline of your document. They are hierarchical. `<h1>` is the most important, representing the main topic of the page. You should only use `<h1>` once per page (usually for the site title or the main article title). `<h2>` defines major sections, `<h3>` sub-sections, and so on down to `<h6>`. Search engines use heading structure to understand the context of your content. Skipping levels (e.g., jumping from `<h1>` to `<h3>`) confuses screen readers and harms SEO. The visual size of a heading is controlled by CSS, but the semantic weight is controlled by the tag. Never use a heading just because you want big bold text; use it for structure.",
+                "use_case": "For a blog post, the title is `<h1>`. The author bio section is `<h2>`. The comments section is `<h2>`. Each comment's title is `<h3>`.",
+                "example": "<h1>Complete Guide to Web Development</h1>\n  <h2>Chapter 1: Setting Up</h2>\n    <h3>Installing VS Code</h3>\n    <h3>Installing Live Server</h3>\n  <h2>Chapter 2: HTML Basics</h2>\n    <h3>What is a Tag?</h3>\n    <h3>Self-Closing Tags</h3>\n      <h4>Void Elements</h4>\n<h6>This is the lowest level</h6>"
+              },
+              {
+                "topic": "3.2 Paragraphs (`<p>`) and Line Breaks (`<br>`), Horizontal Rules (`<hr>`)",
+                "explanation": "The `<p>` tag defines a block of text. Browsers automatically add a margin above and below paragraphs to separate them visually. The `<br>` tag is a void element (self-closing) that inserts a line break within text, forcing the following content to the next line. Use it sparingly; it is usually better to use CSS margins or padding for spacing. The `<hr>` tag (horizontal rule) is a thematic break. It renders a horizontal line and is used to separate distinct sections of content (e.g., a change of scene in a story, or a shift in topic).",
+                "use_case": "Use `<br>` for postal addresses or poems. Use `<hr>` to separate the main article from the 'Related Articles' section.",
+                "example": "<p>This is a standard paragraph. The browser will add space after this line.</p>\n<p>Here is another paragraph.</p>\nAddress:<br>\n123 Main Street<br>\nNairobi, Kenya\n<hr>\n<p>This is a completely new topic section.</p>"
+              },
+              {
+                "topic": "3.3 Inline Text Semantics: `<strong>`, `<em>`, `<u>`, `<mark>`, `<small>`, `<del>`, `<ins>`",
+                "explanation": "These tags modify a piece of text inside a block-level element without breaking the flow. `<strong>` indicates strong importance, seriousness, or urgency. By default, browsers render it as bold. `<em>` (emphasis) indicates stressed emphasis—the meaning of the sentence changes if you stress a different word. By default, it renders as italic. `<u>` (underline) represents a non-textual annotation, like a misspelled word or a proper name in Chinese. `<mark>` represents highlighted text for reference, like a search result match. `<small>` represents side-comments, like fine print or copyright. `<del>` represents deleted text (strikethrough), and `<ins>` represents inserted text (underline). Always choose the tag based on meaning, not appearance, because you can change the appearance with CSS.",
+                "use_case": "In a legal document, use `<small>` for disclaimers. In a shopping cart, use `<del>` for the original price and `<ins>` for the discounted price.",
+                "example": "<p><strong>Warning:</strong> This is a critical system alert.</p>\n<p>I <em>really</em> need you to understand this point.</p>\n<p>Search result for 'javelin': <mark>javelin</mark> thrower.</p>\n<p><del>$100</del> <ins>$75</ins> (Sale price!)</p>\n<p><small>&copy; 2026 All Rights Reserved.</small></p>"
+              },
+              {
+                "topic": "3.4 Quotes: `<blockquote>` and `<q>`",
+                "explanation": "`<blockquote>` is a block-level element used for long, multi-line quotations from another source. It typically has built-in margin indentation. It should be accompanied by the `cite` attribute containing the URL of the source. `<q>` is an inline element for short quotations within a sentence. Browsers automatically add quotation marks around `<q>` in many locales. Both are semantically powerful for screen readers because they announce 'quotation'.",
+                "use_case": "If you are writing a news article and quoting a government official, you wrap their speech in `<blockquote>`. If you are saying 'he told me \"I am fine\"', you use `<q>`.",
+                "example": "<blockquote cite='https://www.example.com/interview'>\n  <p>Innovation distinguishes between a leader and a follower.</p>\n</blockquote>\n<p>Steve Jobs famously said, <q>Innovation distinguishes between a leader and a follower.</q></p>"
+              },
+              {
+                "topic": "3.5 Abbreviations, Addresses, and Citations (`<abbr>`, `<address>`, `<cite>`)",
+                "explanation": "`<abbr>` is used to define an abbreviation or acronym. The `title` attribute holds the full expansion. When you hover over it, the full form appears. It is invaluable for screen readers. `<address>` defines contact information for the nearest `<article>` or `<body>` ancestor. It should contain email, physical address, or phone number. `<cite>` defines the title of a creative work (book, movie, song, article). It renders as italic by default. It is NOT for the author's name; it is for the title of the work.",
+                "use_case": "In a footer, use `<address>` for the company's contact details. In a blog post, use `<cite>` for the book being reviewed.",
+                "example": "<p>The <abbr title='World Health Organization'>WHO</abbr> has issued new guidelines.</p>\n<address>\n  <a href='mailto:info@company.com'>info@company.com</a><br>\n  +254 712 345 678\n</address>\n<p>My favorite book is <cite>Things Fall Apart</cite> by Chinua Achebe.</p>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 4,
+            "chapter_title": "Hyperlinks & Navigation",
+            "topics": [
+              {
+                "topic": "4.1 The `<a>` Tag and the `href` Attribute",
+                "explanation": "The anchor tag (`<a>`) is the heart of the World Wide Web. It creates hyperlinks. The `href` attribute (Hypertext Reference) defines the destination. The content between the opening and closing `<a>` tags is the 'clickable' text (or image). Without the `href`, the `<a>` tag is just a placeholder. Links are not just for navigation; they are how you build the graph of the internet. They can point to external sites, internal pages, specific sections, and even trigger JavaScript.",
+                "use_case": "Creating a navigation menu: `<a href='about.html'>About Us</a>`.",
+                "example": "<a href='https://www.google.com'>Go to Google</a>\n<a href='about.html'>Go to our About Page</a>"
+              },
+              {
+                "topic": "4.2 Absolute vs Relative URLs",
+                "explanation": "An Absolute URL provides the full web address, including the protocol (`https://`) and domain (e.g., `www.example.com`). You use this when linking to other websites. A Relative URL provides the path relative to the current page. For example, if you are on `www.example.com/blog/post.html`, a relative link to `../index.html` would take you to `www.example.com/index.html`. Relative links are always preferred for internal navigation because they make your site portable. If you change your domain name, all relative links still work.",
+                "use_case": "When you build a local site on your computer, you use relative paths like `images/photo.jpg`. When you deploy to a server, these paths remain intact.",
+                "example": "<a href='https://www.bbc.com'>Absolute Link (BBC)</a>\n<a href='/contact'>Relative Root Path (starts from domain root)</a>\n<a href='../products/shoes.html'>Relative Path (go up one folder)</a>"
+              },
+              {
+                "topic": "4.3 Opening Links in New Tabs (`target='_blank'`) and Security (`rel='noopener'`)",
+                "explanation": "The `target` attribute controls where the link opens. `_self` (default) opens in the same tab. `_blank` opens in a new tab. However, when you use `target='_blank'`, the new page gains access to the `window.opener` property of your original page, which is a security risk (malicious sites could redirect your original page to a phishing site). To prevent this, you must add `rel='noopener noreferrer'` to the link. `noopener` severs the `window.opener` reference, and `noreferrer` prevents the new site from knowing which site referred the user.",
+                "use_case": "Any time you link to an external website, you should always use `target='_blank'` (for user convenience) AND `rel='noopener noreferrer'` (for security).",
+                "example": "<a href='https://www.youtube.com' target='_blank' rel='noopener noreferrer'>Watch on YouTube (opens safely in new tab)</a>"
+              },
+              {
+                "topic": "4.4 Internal Page Navigation (Linking to IDs with `#id-name`)",
+                "explanation": "You can link to a specific section within the same page by using the `id` attribute on a target element and referencing it in the `href` with a hash (`#`). For example, `<h2 id='contact'>Contact</h2>` can be linked with `<a href='#contact'>Jump to Contact</a>`. This creates a smooth user experience for long pages (like FAQs or documentation). You can also link to specific IDs on other pages: `about.html#mission`.",
+                "use_case": "Building a 'Table of Contents' at the top of a long blog post. Clicking a TOC item scrolls the user to that section.",
+                "example": "<a href='#section1'>Go to Section 1</a>\n<h2 id='section1'>Section 1</h2>\n<p>This is the content of section 1.</p>"
+              },
+              {
+                "topic": "4.5 Email Links (`mailto:`) and Phone Links (`tel:`)",
+                "explanation": "The `href` attribute is not limited to HTTP/HTTPS. The `mailto:` protocol tells the browser to open the user's default email client with a pre-filled recipient address. You can even add `?subject=...` and `&body=...` to pre-fill the subject and body. The `tel:` protocol tells the browser to initiate a phone call (primarily used on mobile devices). When a user clicks a `tel:` link on a phone, it opens the dialer app.",
+                "use_case": "In a 'Contact Us' page, you provide mailto links for support and tel links for customer service hotlines.",
+                "example": "<a href='mailto:support@company.com?subject=Order%20Issue&body=My%20order%20number%20is%20123'>Email Support</a>\n<a href='tel:+254712345678'>Call Us (24/7)</a>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 5,
+            "chapter_title": "Images, Multimedia, and External Content",
+            "topics": [
+              {
+                "topic": "5.1 The `<img>` Tag: `src`, `alt`, `width`, `height`",
+                "explanation": "Images are embedded using the `<img>` tag, which is a void element (no closing tag). The `src` (source) attribute is mandatory—it tells the browser where to find the image file. The `alt` (alternative text) attribute is also mandatory for accessibility. It provides a textual description of the image for screen readers and is displayed if the image fails to load. `width` and `height` attributes specify the intrinsic dimensions of the image (in pixels). Specifying these helps the browser reserve space on the page before the image loads, preventing layout shifts (a Core Web Vitals metric).",
+                "use_case": "Product images on an e-commerce site. The `alt` text should describe the product, e.g., 'Red leather handbag with gold clasp'.",
+                "example": "<img src='images/handbag.jpg' alt='Red leather handbag with gold clasp' width='600' height='400'>"
+              },
+              {
+                "topic": "5.2 File Formats: JPEG, PNG, GIF, WebP, SVG",
+                "explanation": "Choosing the right format is critical for performance. **JPEG** is best for photographs and complex images with many colors; it uses lossy compression (small file size, slight quality loss). **PNG** supports transparency and lossless compression; use it for logos, screenshots, or graphics with sharp lines. **GIF** supports animation but is limited to 256 colors; use for simple animations. **WebP** is a modern format developed by Google that provides superior compression (smaller files than JPEG/PNG with equal or better quality) and supports transparency and animation; it is supported by all modern browsers. **SVG** (Scalable Vector Graphics) is XML-based; it's not a pixel-based format but a mathematical description of the image. SVGs are infinitely scalable, never pixelate, and are tiny; use them for icons, illustrations, and logos.",
+                "use_case": "Use JPEG for a hero background image of a landscape. Use PNG for your company logo (transparent background). Use SVG for navigation icons (like magnifying glass or menu bars). Use WebP for all new content to save bandwidth.",
+                "example": "<!-- Modern approach with WebP fallback -->\n<picture>\n  <source srcset='image.webp' type='image/webp'>\n  <img src='image.jpg' alt='A descriptive text' width='800' height='600'>\n</picture>"
+              },
+              {
+                "topic": "5.3 The `<picture>` Element and `srcset` (Responsive Images)",
+                "explanation": "Serving the same large image to a 4K desktop and a small smartphone wastes bandwidth and slows down mobile load times. The `<picture>` element allows you to specify multiple `source` elements, each for a different media condition. The browser picks the first one that matches. The `srcset` attribute (used on `<img>` or `<source>`) defines a list of image files and their widths (e.g., `image-small.jpg 480w, image-large.jpg 1200w`). The browser then calculates which image fits the viewport and pixel density and downloads the optimal one. This is called 'Art Direction'.",
+                "use_case": "On mobile, you want a cropped portrait version of a team photo; on desktop, you want the full landscape group photo.",
+                "example": "<picture>\n  <source media='(max-width: 600px)' srcset='photo-mobile.jpg' width='400' height='600'>\n  <source media='(min-width: 601px)' srcset='photo-desktop.jpg' width='1200' height='800'>\n  <img src='photo-mobile.jpg' alt='Team photo'>\n</picture>"
+              },
+              {
+                "topic": "5.4 Audio: `<audio>` with `controls`, `autoplay`, `loop`",
+                "explanation": "The `<audio>` tag embeds sound files. By default, it is invisible. You must include the `controls` attribute to display play/pause, volume, and progress bars to the user. `autoplay` makes the audio start as soon as it loads, but most browsers block this unless the user has interacted with the page first (to prevent annoying auto-playing ads). `loop` makes the audio replay indefinitely. You should provide multiple `<source>` tags with different formats (e.g., .mp3, .ogg) for cross-browser compatibility.",
+                "use_case": "A podcast landing page where users can preview an episode without leaving the site.",
+                "example": "<audio controls>\n  <source src='audio/episode1.mp3' type='audio/mpeg'>\n  <source src='audio/episode1.ogg' type='audio/ogg'>\n  Your browser does not support the audio element.\n</audio>"
+              },
+              {
+                "topic": "5.5 Video: `<video>` with `controls`, `poster`, and multiple sources",
+                "explanation": "The `<video>` tag works similarly to `<audio>`. The `poster` attribute specifies an image to show while the video is downloading or until the user hits play. This creates a professional 'thumbnail' for your video. `preload` controls how much of the video the browser should download before play (use `metadata` for just duration, or `none` for bandwidth saving). You must provide multiple sources (.mp4, .webm) for maximum browser compatibility.",
+                "use_case": "A product demo page where the visitor can watch a 2-minute tutorial video. The poster image is a screenshot of the video interface.",
+                "example": "<video controls width='640' height='360' poster='images/video-poster.jpg' preload='metadata'>\n  <source src='videos/demo.mp4' type='video/mp4'>\n  <source src='videos/demo.webm' type='video/webm'>\n  <p>Your browser doesn't support HTML5 video. <a href='videos/demo.mp4'>Download it here</a>.</p>\n</video>"
+              },
+              {
+                "topic": "5.6 Embedding Outside Content: The `<iframe>`",
+                "explanation": "An Inline Frame (`<iframe>`) embeds an entire HTML document inside another document. It is used for embedding YouTube videos, Google Maps, social media posts, or third-party widgets. The `src` attribute defines the external URL. The `loading='lazy'` attribute is highly recommended to defer loading off-screen iframes. Modern iframes also use the `allow` attribute to enable specific browser features (like microphone or accelerometer).",
+                "use_case": "Adding a Google Map to your 'Contact Us' page showing your office location.",
+                "example": "<iframe \n  src='https://www.google.com/maps/embed?pb=...' \n  width='600' \n  height='450' \n  style='border:0;' \n  allowfullscreen='' \n  loading='lazy' \n  referrerpolicy='no-referrer-when-downgrade'>\n</iframe>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 6,
+            "chapter_title": "Lists (Organizing Information)",
+            "topics": [
+              {
+                "topic": "6.1 Unordered Lists (`<ul>`) with `<li>`",
+                "explanation": "The Unordered List (`<ul>`) is used for a collection of items where order does not matter. Each item is wrapped in a List Item (`<li>`) tag. By default, browsers display bullet points (discs). You can change the bullet style with CSS (`list-style-type`). This is the most common list type for navigation menus, feature lists, and ingredients.",
+                "use_case": "Displaying a list of product features or a navigation menu.",
+                "example": "<ul>\n  <li>Free Wi-Fi</li>\n  <li>Swimming Pool</li>\n  <li>24/7 Security</li>\n</ul>"
+              },
+              {
+                "topic": "6.2 Ordered Lists (`<ol>`) with Types",
+                "explanation": "The Ordered List (`<ol>`) is for items where sequence matters. The `type` attribute can change the numbering style: `1` (numbers), `A` (uppercase letters), `a` (lowercase), `I` (Roman numerals), `i` (lowercase Roman). You can also use the `start` attribute to start numbering from a specific number. The `reversed` attribute counts down.",
+                "use_case": "A recipe instructions list (step 1, step 2, step 3) or a top-10 ranking.",
+                "example": "<ol type='I'>\n  <li>Preheat oven to 180°C</li>\n  <li>Mix flour and sugar</li>\n  <li>Bake for 20 minutes</li>\n</ol>"
+              },
+              {
+                "topic": "6.3 Nested Lists (Multi-Level Menus)",
+                "explanation": "You can place a `<ul>` or `<ol>` inside an `<li>` to create a nested, hierarchical structure. This is the fundamental way to build multi-level dropdown navigation menus. Proper nesting helps screen readers understand the parent-child relationship of categories.",
+                "use_case": "A website sitemap or a complex category filter for an e-commerce sidebar.",
+                "example": "<ul>\n  <li>Electronics\n    <ul>\n      <li>Phones</li>\n      <li>Laptops</li>\n    </ul>\n  </li>\n  <li>Clothing\n    <ul>\n      <li>Men</li>\n      <li>Women</li>\n    </ul>\n  </li>\n</ul>"
+              },
+              {
+                "topic": "6.4 Description Lists (`<dl>`, `<dt>`, `<dd>`)",
+                "explanation": "The Description List is a specialized list for name-value pairs. It consists of `<dt>` (Description Term) and `<dd>` (Description Description). It is perfect for glossaries, FAQs, or metadata displays (e.g., product specifications). Screen readers interpret these semantically as definitions.",
+                "use_case": "A product page showing 'Color: Red', 'Weight: 2kg', 'Material: Steel'.",
+                "example": "<dl>\n  <dt>CPU</dt>\n  <dd>Intel Core i7-12700K</dd>\n  <dt>RAM</dt>\n  <dd>32GB DDR5</dd>\n  <dt>Storage</dt>\n  <dd>1TB NVMe SSD</dd>\n</dl>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 7,
+            "chapter_title": "Tables (Grids of Data)",
+            "topics": [
+              {
+                "topic": "7.1 Table Structure: `<table>`, `<thead>`, `<tbody>`, `<tfoot>`",
+                "explanation": "Tables are for tabular data—spreadsheets of information. They are NOT for layout (we use CSS Grid/Flexbox for that). A table is built row by row. `<thead>` wraps the header row (usually `<th>` tags). `<tbody>` wraps the main data rows (`<td>` tags). `<tfoot>` wraps summary rows (like totals or averages). This structure is essential for accessibility and allows the browser to scroll the body while keeping the header fixed.",
+                "use_case": "Financial reports, timetables, comparison charts.",
+                "example": "<table>\n  <thead>\n    <tr><th>Product</th><th>Price</th><th>Stock</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>Apple</td><td>$1.00</td><td>50</td></tr>\n    <tr><td>Banana</td><td>$0.50</td><td>30</td></tr>\n  </tbody>\n  <tfoot>\n    <tr><td>Total</td><td>$1.50</td><td>80</td></tr>\n  </tfoot>\n</table>"
+              },
+              {
+                "topic": "7.2 Rows (`<tr>`) and Cells (`<td>` / `<th>`)",
+                "explanation": "`<tr>` defines a table row. Inside a row, `<th>` (Table Header) is used for header information. Browsers automatically make `<th>` text bold and centered. `<td>` (Table Data) is used for regular cells. Both `<th>` and `<td>` must reside inside a `<tr>`.",
+                "example": "See the example in 7.1. Notice the difference in styling between the `th` (bold, centered) and `td` (regular)."
+              },
+              {
+                "topic": "7.3 Spanning Columns and Rows (`colspan`, `rowspan`)",
+                "explanation": "Sometimes a cell needs to stretch across multiple columns or rows. `colspan='2'` makes a cell take up the space of two columns. `rowspan='3'` makes a cell take up three rows. This creates complex layouts like a merged header or a sub-category label. Use it carefully, as it increases table complexity.",
+                "use_case": "A school timetable where a single subject spans multiple periods, or a financial report where a category spans multiple sub-items.",
+                "example": "<table border='1'>\n  <tr>\n    <th colspan='2'>Personal Details</th>\n    <th>Score</th>\n  </tr>\n  <tr>\n    <td>Name</td>\n    <td>John</td>\n    <td rowspan='2'>A+</td>\n  </tr>\n  <tr>\n    <td>Class</td>\n    <td>12</td>\n  </tr>\n</table>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 8,
+            "chapter_title": "Forms & User Input (The Interactive Vault)",
+            "topics": [
+              {
+                "topic": "8.1 The `<form>` element: `action` and `method`",
+                "explanation": "The `<form>` is the container for all user input elements. The `action` attribute specifies the URL where the form data should be sent when the user submits. The `method` attribute specifies the HTTP method: `GET` (appends data to the URL, visible in address bar, good for searches) or `POST` (sends data in the body, not visible, good for passwords and large data). Without these, the form will just reload the page.",
+                "use_case": "Login forms always use `method='POST'`. Search bars use `method='GET'` so the query is bookmarkable.",
+                "example": "<form action='/submit' method='POST'>\n  <!-- Inputs go here -->\n  <button type='submit'>Send</button>\n</form>"
+              },
+              {
+                "topic": "8.2 The `<label>` tag and `for` attribute",
+                "explanation": "Labels are critical for accessibility. They associate a text description with a specific form control. The `for` attribute must match the `id` of the input. When a user clicks the label text, the browser automatically focuses on the associated input. This dramatically improves usability on mobile where tapping small input boxes is hard.",
+                "use_case": "Every single input in a professional form must have a corresponding label.",
+                "example": "<label for='email'>Email Address</label>\n<input type='email' id='email' name='email' placeholder='you@example.com'>"
+              },
+              {
+                "topic": "8.3 The `<input>` tag: `type='text'`, `password`, `email`, `number`, `tel`, `url`",
+                "explanation": "The `input` element is the most versatile form control. The `type` attribute changes its behavior and validation. `text` is generic text. `password` masks characters. `email` validates for `@` and a domain. `number` shows up/down arrows (spinners) and validates numbers. `tel` brings up the numeric keypad on mobile. `url` validates for a web address. Each has its own keyboard layout on mobile, making data entry faster.",
+                "use_case": "A registration form uses `type='email'` and `type='password'`. A phone number field uses `type='tel'`.",
+                "example": "<label for='username'>Username</label>\n<input type='text' id='username' name='username'>\n\n<label for='userpass'>Password</label>\n<input type='password' id='userpass' name='userpass'>"
+              },
+              {
+                "topic": "8.4 Input Attributes: `placeholder`, `required`, `minlength`, `maxlength`, `pattern`",
+                "explanation": "Attributes add constraints and UX enhancements. `placeholder` shows hint text inside the field that disappears when typing. `required` makes the field mandatory; the browser will block submission and show a default error message if empty. `minlength` and `maxlength` limit character count. `pattern` accepts a Regular Expression (regex) to enforce complex rules (e.g., a Kenyan phone number pattern `^[+][0-9]{12}$`).",
+                "use_case": "A credit card field uses `pattern` to ensure 16 digits. A password field uses `minlength='8'`.",
+                "example": "<input type='text' placeholder='Enter your full name' required minlength='3' maxlength='50'>\n<input type='text' pattern='[A-Za-z]{3}' title='Enter exactly 3 letters.'>"
+              },
+              {
+                "topic": "8.5 Checkboxes and Radio Buttons with Grouping",
+                "explanation": "Checkboxes (`type='checkbox'`) allow multiple selections from a list. Radio buttons (`type='radio'`) allow only one selection from a group. To group radio buttons, give them the same `name` attribute. Both can have a `value` attribute (the data sent to the server). Both should have associated `<label>` tags. Use the `checked` attribute to pre-select an option.",
+                "use_case": "Checkboxes for 'Select all toppings' (Multiple). Radio buttons for 'Gender' (Male/Female/Other - single choice).",
+                "example": "<label><input type='checkbox' name='toppings' value='cheese'> Cheese</label>\n<label><input type='checkbox' name='toppings' value='pepperoni'> Pepperoni</label>\n\n<label><input type='radio' name='gender' value='male' checked> Male</label>\n<label><input type='radio' name='gender' value='female'> Female</label>"
+              },
+              {
+                "topic": "8.6 Dropdowns: The `<select>` tag with `<option>`",
+                "explanation": "The `<select>` element creates a dropdown list. Each item is an `<option>` tag. The `value` attribute of the `<option>` is what gets sent to the server; the inner text is what the user sees. You can group related options using `<optgroup label='Group Name'>`. The `multiple` attribute allows selecting multiple items (with Ctrl+Click). The `selected` attribute pre-selects an option.",
+                "use_case": "A country selector, a year selector, or a category filter.",
+                "example": "<label for='cars'>Choose a car:</label>\n<select id='cars' name='cars'>\n  <optgroup label='German Cars'>\n    <option value='bmw'>BMW</option>\n    <option value='audi'>Audi</option>\n  </optgroup>\n  <optgroup label='Japanese Cars'>\n    <option value='toyota' selected>Toyota</option>\n    <option value='honda'>Honda</option>\n  </optgroup>\n</select>"
+              },
+              {
+                "topic": "8.7 Large Text Areas: The `<textarea>` tag",
+                "explanation": "The `<textarea>` is a multi-line text input. Unlike `<input type='text'>`, it allows line breaks. It uses `rows` and `cols` attributes to define size, but CSS is preferred for styling (`width` and `height`). The content between the opening and closing tags is the default text. The `maxlength` attribute limits total characters. It is perfect for feedback, messages, or descriptions.",
+                "use_case": "A 'Message' field on a contact form or a product review box.",
+                "example": "<label for='message'>Your Message</label>\n<textarea id='message' name='message' rows='4' cols='50' placeholder='Write your feedback here...' maxlength='500'></textarea>"
+              },
+              {
+                "topic": "8.8 Buttons: `<button type='submit'>`, `reset`, `button`",
+                "explanation": "The `<button>` element is more flexible than `<input type='button'>` because it can contain HTML (like images or icons). The `type` attribute defines its behavior: `submit` (sends the form), `reset` (resets all fields in the form to their default values), and `button` (does nothing by default, to be used with JavaScript). Always use `<button>` over `<input>` for consistency.",
+                "use_case": "A form with a 'Send' submit button and a 'Clear' reset button.",
+                "example": "<button type='submit'><i>📧</i> Send Message</button>\n<button type='reset'>Clear Form</button>\n<button type='button' onclick='alert(\"Hello!\")'>Click Me</button>"
+              },
+              {
+                "topic": "8.9 Fieldsets and Legends (`<fieldset>`, `<legend>`)",
+                "explanation": "`<fieldset>` groups related form controls together and draws a visual box around them. `<legend>` provides a caption for the fieldset. This is semantically rich and helps screen reader users navigate long forms by grouping related questions (like 'Personal Information' or 'Payment Details').",
+                "use_case": "On a checkout page, grouping 'Billing Address' and 'Shipping Address' into separate fieldsets.",
+                "example": "<fieldset>\n  <legend>Personal Information</legend>\n  <label>First Name: <input type='text'></label>\n  <label>Last Name: <input type='text'></label>\n</fieldset>\n<fieldset>\n  <legend>Login Credentials</legend>\n  <label>Email: <input type='email'></label>\n  <label>Password: <input type='password'></label>\n</fieldset>"
+              },
+              {
+                "topic": "8.10 The `<datalist>` (Autocomplete Dropdown)",
+                "explanation": "`<datalist>` provides an 'autocomplete' feature for an `<input>`. As the user types, a dropdown of pre-defined options appears. It is like a `<select>` but allows the user to type any custom value that isn't in the list. The `<input>` must have a `list` attribute that matches the `id` of the `<datalist>`.",
+                "use_case": "A browser's search bar that suggests popular searches, or a city input field that suggests major cities.",
+                "example": "<label for='city'>Enter City</label>\n<input list='cities' id='city' name='city'>\n<datalist id='cities'>\n  <option value='Nairobi'>\n  <option value='Mombasa'>\n  <option value='Kisumu'>\n  <option value='Eldoret'>\n</datalist>"
+              },
+              {
+                "topic": "8.11 File Uploads (`type='file'`) and multiple",
+                "explanation": "The `input` tag with `type='file'` opens the operating system's file picker. The `accept` attribute restricts file types (e.g., `accept='.jpg,.png'` or `accept='image/*'`). The `multiple` attribute allows selecting several files at once. For security reasons, JavaScript cannot access the full file path, but it can read the file content using the File API.",
+                "use_case": "A profile picture upload form, or a document submission portal.",
+                "example": "<label for='profilePic'>Upload Profile Picture</label>\n<input type='file' id='profilePic' name='profilePic' accept='image/png, image/jpeg'>\n\n<label for='documents'>Upload Multiple Documents</label>\n<input type='file' id='documents' name='documents' multiple>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 9,
+            "chapter_title": "Semantic HTML & Page Architecture",
+            "topics": [
+              {
+                "topic": "9.1 Understanding Screen Readers and SEO Robots",
+                "explanation": "Semantic HTML is not just a buzzword. It is the practice of using HTML elements for their intended meaning. This provides a 'semantic layer' that search engines (Google bots) and assistive technologies (screen readers) rely on. A screen reader announces `<main>` as 'Main content starts here', allowing a blind user to skip the nav. Google uses `<article>` to understand it is a self-contained piece of content. Using `<div>` and `<span>` for everything is like speaking in grunts; using semantics is like speaking clear sentences.",
+                "use_case": "A news website. The main article is wrapped in `<article>`. The site header is `<header>`. The navigation is `<nav>`. The sidebar ads are `<aside>`. Google can easily parse the main content from the ads.",
+                "example": "Compare these two. Bad: `<div class='header'>` -> Good: `<header>`. Bad: `<div class='nav'>` -> Good: `<nav>`. The visual appearance is identical, but the meaning is entirely different."
+              },
+              {
+                "topic": "9.2 Structural Tags: `<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<aside>`, `<footer>`",
+                "explanation": "These are your page's architectural pillars. `<header>` is introductory content (logos, search bars, navigation). `<nav>` is a block of navigation links. `<main>` wraps the primary content unique to this page (only one per page). `<section>` groups thematically related content (e.g., a chapter). `<article>` is self-contained, distributable content (e.g., a blog post, a forum post). `<aside>` is tangentially related content (sidebars, pull quotes). `<footer>` is the footer (copyright, legal links, contact details).",
+                "use_case": "A blog layout: `<header>` (Site logo), `<nav>` (Menu), `<main>` (Blog post `<article>`), `<aside>` (Author bio), `<footer>` (Copyright).",
+                "example": "<header>\n  <h1>My Blog</h1>\n  <nav>\n    <a href='/'>Home</a>\n    <a href='/about'>About</a>\n  </nav>\n</header>\n<main>\n  <article>\n    <h2>10 Web Development Tips</h2>\n    <p>Content goes here...</p>\n  </article>\n  <aside>\n    <h3>About the Author</h3>\n    <p>John is a developer.</p>\n  </aside>\n</main>\n<footer>\n  <p>&copy; 2026 My Blog</p>\n</footer>"
+              },
+              {
+                "topic": "9.3 The `<figure>` and `<figcaption>` for Media Captions",
+                "explanation": "`<figure>` is used to wrap media (images, diagrams, code snippets) that is referenced from the main flow. `<figcaption>` provides a caption for that figure. This semantically groups the media with its description. It is superior to just using a `<p>` underneath because it tells the browser that the caption belongs *to* the figure.",
+                "use_case": "An image gallery or a chart in a research paper.",
+                "example": "<figure>\n  <img src='chart.jpg' alt='Sales chart for 2025'>\n  <figcaption>Figure 1: Q4 sales figures showing a 20% increase.</figcaption>\n</figure>"
+              },
+              {
+                "topic": "9.4 The `<time>`, `<progress>`, and `<meter>` elements",
+                "explanation": "These are specialized semantic elements. `<time>` represents a specific time or date; it has a `datetime` attribute for machine-readability. `<progress>` represents the completion status of a task (a progress bar). `<meter>` represents a scalar measurement within a known range (e.g., disk usage, voting score).",
+                "use_case": "A download progress indicator (`<progress>`), a battery meter (`<meter>`), or a timestamp on a blog post (`<time>`).",
+                "example": "<p>Published on <time datetime='2026-07-03'>July 3, 2026</time></p>\n<label>Download progress:</label>\n<progress value='70' max='100'>70%</progress>\n<label>Storage usage:</label>\n<meter value='6' min='0' max='10'>6 out of 10 GB used</meter>"
+              },
+              {
+                "topic": "9.5 Divs (`<div>`) and Spans (`<span>`) - The Generic Buckets",
+                "explanation": "While semantic elements are preferred, `<div>` and `<span>` are essential tools. `<div>` is a block-level generic container. `<span>` is an inline generic container. They have no semantic meaning. You use them when no other element fits. For example, a `<div>` is used to group layout sections for CSS styling (e.g., `<div class='container'>`). A `<span>` is used to style a piece of text inside a paragraph (e.g., `<span class='highlight'>`). Overusing them is called 'div-itis' and is a sign of poor markup. Use semantics first, generic only as a last resort.",
+                "use_case": "A wrapper for a grid system (e.g., `<div class='row'>`). A colored word inside a sentence (`<span style='color:red'>important</span>`).",
+                "example": "<div class='product-card'>\n  <img src='...' alt='...'>\n  <div class='product-info'>\n    <h3>Product Name</h3>\n    <p>Price: <span class='price'>$99</span></p>\n  </div>\n</div>"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 2,
+        "part_title": "THE SKIN (CSS - Styling, Colors, and Typography)",
+        "description": "Now that you have a skeleton, you will paint it. CSS is all about selecting elements and applying visual rules. We cover every selector, every color model, and every font trick.",
+        "chapters": [
+          {
+            "chapter_number": 10,
+            "chapter_title": "How CSS Attaches & The Cascade",
+            "topics": [
+              {
+                "topic": "10.1 Three ways to apply CSS: Inline, Internal, External",
+                "explanation": "Inline CSS is applied directly to an element using the `style` attribute (e.g., `<p style='color:red;'>`). It has the highest specificity but is the worst for maintenance because it mixes content with presentation. Internal CSS is placed inside the `<style>` tag in the `<head>`. It works for a single page but doesn't scale. External CSS is a separate `.css` file linked via `<link rel='stylesheet' href='styles.css'>`. This is the gold standard. It separates concerns, allows caching across pages (so users download it once), and keeps your HTML clean.",
+                "use_case": "For production, always use External CSS. Use Internal CSS for prototyping a single-page demo. Avoid Inline CSS at all costs.",
+                "example": "External: `<link rel='stylesheet' href='css/main.css'>`.\nInternal: `<style> body { background: #f0f0f0; } </style>`.\nInline: `<p style='font-size: 20px;'>Hello</p>` (Avoid this)."
+              },
+              {
+                "topic": "10.2 The Cascade Explained",
+                "explanation": "The 'Cascade' is the algorithm that resolves conflicts when multiple CSS rules apply to the same element. It has three stages: 1) **Origin and Importance**: User-agent (browser) styles have the lowest priority; author styles (yours) win; however, `!important` flips the table. 2) **Specificity**: Who is most specific? Inline > ID > Class > Type. 3) **Order**: If specificity is equal, the last rule written in the CSS file wins. Understanding the cascade prevents you from writing frantic `!important` overrides.",
+                "use_case": "When a utility class doesn't apply, it's usually because your selector is less specific than the one overriding it.",
+                "example": "If you have `h1 { color: red; }` and later `.title { color: blue; }`, and your `<h1 class='title'>` exists, the class (.title) is more specific than the type (h1), so it will be blue. If you have `.title { color: blue; }` and `.title { color: green; }`, the last one wins (green)."
+              },
+              {
+                "topic": "10.3 Specificity Wars: Inline > IDs > Classes > Elements",
+                "explanation": "Specificity is calculated as a 4-part number (0,0,0,0). Inline styles: (1,0,0,0). IDs: (0,1,0,0). Classes, pseudo-classes, attributes: (0,0,1,0). Type elements and pseudo-elements: (0,0,0,1). Universal selector (`*`) has (0,0,0,0). When comparing, the leftmost highest number wins. This is why using overly specific selectors (like `#sidebar .nav ul li a`) makes your CSS brittle and hard to override. Best practice is to keep specificity low (use classes) to keep your CSS maintainable.",
+                "use_case": "Debugging specificity issues is a daily task for developers. Mastering this saves hours.",
+                "example": "`#myId` (0,1,0,0) beats `.myClass` (0,0,1,0). `.myClass a` (0,0,1,1) beats `div p a` (0,0,0,3) because the class outweighs three elements."
+              },
+              {
+                "topic": "10.4 The `!important` Rule",
+                "explanation": "`!important` is a sledgehammer. When you add `!important` to a declaration (e.g., `color: red !important;`), it overrides normal specificity, even inline styles (in most cases). It also elevates the declaration to the 'Important' origin tier. The problem with `!important` is that once you use it, you cannot override it without using another `!important` with higher specificity, leading to an arms race. The only acceptable use is for utility classes that need absolute finality (like `.hidden { display: none !important; }`) or for overriding third-party CSS that you cannot control.",
+                "use_case": "Never use it to fix a layout issue. Fix the specificity instead.",
+                "example": "Bad: `button { background: blue !important; }` (now any other button style is impossible to override without another !important). Good: `.btn { background: blue; }` (you can later add `.btn.special { background: red; }` to override cleanly)."
+              },
+              {
+                "topic": "10.5 Inheritance: Which properties pass from parent to child",
+                "explanation": "Certain CSS properties (like `color`, `font-family`, `line-height`, and `text-align`) are inherited from parent elements to child elements. If you set `color: gray` on the `<body>`, all paragraphs, headings, and spans inside will be gray unless they explicitly override it. Properties like `width`, `height`, `margin`, `padding`, and `border` are NOT inherited. Understanding inheritance allows you to set global styles on the `<body>` or a container and let children inherit them, reducing repetition. You can force inheritance with `inherit` or prevent it with `initial`.",
+                "use_case": "Set `font-family` on `body` to have a consistent font across the whole site, then override it on specific elements that need a different font.",
+                "example": "CSS: `body { font-family: Arial; color: #333; }` \nHTML: `<p>This is Arial and #333.</p>` (Inherited). `<p style='color:red;'>This is Arial but red.</p>` (Overrides color, keeps font)."
+              }
+            ]
+          },
+          {
+            "chapter_number": 11,
+            "chapter_title": "Selectors (Targeting Anything on the Page)",
+            "topics": [
+              {
+                "topic": "11.1 Universal Selector (`*`)",
+                "explanation": "The universal selector matches every single element in the document. It is often used for 'reset' styles or to apply a `box-sizing: border-box` globally. However, using it carelessly can be slow because it matches everything. It has the lowest specificity (0,0,0,0).",
+                "use_case": "A global reset: `* { margin: 0; padding: 0; box-sizing: border-box; }` ensures every element starts from a clean slate.",
+                "example": "* { border: 1px solid red; } // This would draw a red border around EVERY element on the page."
+              },
+              {
+                "topic": "11.2 Type/Element Selectors (`h1`, `p`, `div`)",
+                "explanation": "This targets all elements of a specific tag name. It has low specificity. It is useful for broad base styling. However, overusing type selectors can cause conflicts later if you try to change the styling of a specific instance.",
+                "use_case": "Setting default margins and font sizes for headings.",
+                "example": "h1 { font-size: 2.5rem; } \np { line-height: 1.6; }"
+              },
+              {
+                "topic": "11.3 Class Selectors (`.my-class`)",
+                "explanation": "This is the workhorse of CSS. A class is a reusable identifier that you can apply to any number of elements. You define it in CSS with a dot (`.`) and apply it in HTML with the `class` attribute. Classes have higher specificity than type selectors and are perfectly reusable. You can have multiple classes on one element (e.g., `class='btn btn-primary'`), which is the foundation of component-based design.",
+                "use_case": "Styling all buttons, all cards, all errors. You write the style once and use the class everywhere.",
+                "example": ".btn { padding: 10px 20px; border: none; background: blue; color: white; } \n.btn-primary { background: darkblue; } \n\n<button class='btn btn-primary'>Click</button>"
+              },
+              {
+                "topic": "11.4 ID Selectors (`#my-id`)",
+                "explanation": "An ID must be unique on the page. It has high specificity (0,1,0,0). You should rarely use IDs for styling because they are not reusable and their high specificity makes overrides difficult. IDs are best used for JavaScript hooks or in-page anchor links. If you find yourself using an ID in CSS, ask yourself if a class would work—it usually does.",
+                "use_case": "Only for unique structural elements that will never repeat, like the main logo or a page-specific container.",
+                "example": "#site-header { background: black; } // Use a class .site-header instead for flexibility."
+              },
+              {
+                "topic": "11.5 Grouping Selectors (`,`) and Chaining (`.class1.class2`)",
+                "explanation": "Grouping allows you to apply the same styles to multiple selectors by separating them with a comma (e.g., `h1, h2, .title { font-weight: bold; }`). This reduces repetition. Chaining allows you to select an element that has *all* of the specified classes/attributes (e.g., `.btn.primary` selects only elements that have BOTH classes `btn` and `primary`). This increases specificity without needing IDs.",
+                "use_case": "Grouping: resetting margins on multiple elements. Chaining: creating a specific variant of a component.",
+                "example": "h1, h2, h3 { margin-top: 0; } \n.btn.disabled { opacity: 0.5; pointer-events: none; } // Only selects elements with both .btn and .disabled."
+              },
+              {
+                "topic": "11.6 Descendant Combinators (space) vs Child Combinators (`>`)",
+                "explanation": "Descendant combinator (space) selects an element that is a descendant (any level deep) of another element (e.g., `div p` selects all paragraphs inside a div, even if nested inside other tags). Child combinator (`>`) selects only direct children (e.g., `div > p` selects only paragraphs that are directly inside a div, not inside a nested `<section>`). Child combinators are more specific and performant because they search fewer levels.",
+                "use_case": "Use child combinators for strict components where you don't want styles to leak into nested elements.",
+                "example": "ul.nav > li { display: inline; } // Only applies to LI that are direct children of ul.nav, not to LIs inside dropdowns within the nav."
+              },
+              {
+                "topic": "11.7 Adjacent Sibling (`+`) and General Sibling (`~`)",
+                "explanation": "Sibling combinators target elements that share the same parent. Adjacent sibling (`+`) targets the element that comes immediately after the specified element (e.g., `h1 + p` selects the first paragraph directly after an h1). General sibling (`~`) targets all following siblings (e.g., `h1 ~ p` selects all paragraphs that come after an h1, not just the first).",
+                "use_case": "Adding a top margin to a paragraph that follows a heading, or styling labels differently when they have a sibling input.",
+                "example": "label + input { margin-left: 10px; } // Adds space between label and its adjacent input.\n.error ~ .input-group { border-color: red; } // Highlights the input group if an error message is before it."
+              },
+              {
+                "topic": "11.8 Attribute Selectors: `[type='text']`, `[href^='https']`, `[src$='.png']`",
+                "explanation": "Attribute selectors match elements based on their attributes. `[attr='value']` matches exact value. `[attr^='value']` matches the beginning (prefix). `[attr$='value']` matches the end (suffix). `[attr*='value']` matches anywhere in the string. This allows you to style elements without adding extra classes, which is very useful for dynamic content.",
+                "use_case": "Style all links that point to external domains (starting with 'http') with a different color. Style all image tags that load PNGs with a specific border.",
+                "example": "a[href^='https://'] { color: green; } // External links are green.\ninput[type='text'] { width: 100%; } // All text inputs are full width."
+              }
+            ]
+          },
+          {
+            "chapter_number": 12,
+            "chapter_title": "Colors, Backgrounds, and Gradients",
+            "topics": [
+              {
+                "topic": "12.1 Color Names and Hexadecimal (`#FF5733`)",
+                "explanation": "CSS recognizes 140 named colors (e.g., `red`, `royalblue`, `lightcoral`). They are great for prototyping but not for production. Hexadecimal (Hex) is a 6-character code representing RGB values (`#RRGGBB`). `#FF5733` means Red=255, Green=87, Blue=51. You can use shorthand if the pairs match (e.g., `#F53` is short for `#FF5533`). Hex is compact and widely used.",
+                "use_case": "Brand colors are usually given as Hex codes (e.g., `#1A73E8` for Google Blue).",
+                "example": ".logo { color: #1A73E8; } \n.error { color: #FF0000; } \n.success { color: #00AA00; }"
+              },
+              {
+                "topic": "12.2 RGB and RGBA (Adding Transparency)",
+                "explanation": "RGB notation uses decimal values (0-255) for Red, Green, Blue: `rgb(255, 87, 51)`. RGBA adds an Alpha channel (0 to 1) for opacity: `rgba(255, 87, 51, 0.5)` makes it 50% transparent. RGBA is invaluable for overlays, shadows, and subtle background blending where you don't want the parent to be completely opaque.",
+                "use_case": "A semi-transparent overlay for a hero image (text is readable over the image).",
+                "example": ".hero { background: rgba(0, 0, 0, 0.6); } // Darkens the background so white text pops.\n.hover-effect { background-color: rgba(255, 0, 0, 0.3); } // Light red tint on hover."
+              },
+              {
+                "topic": "12.3 HSL and HSLA (Hue, Saturation, Lightness)",
+                "explanation": "HSL is a human-friendly color model. `hsl(360, 100%, 50%)` where Hue is a degree on the color wheel (0=red, 120=green, 240=blue), Saturation is percentage, and Lightness is percentage. HSLA adds alpha. HSL makes it easier to create color palettes (e.g., changing the hue to shift from red to blue while keeping saturation/lightness constant).",
+                "use_case": "Creating a dynamic theming system where you can change the primary color just by changing the hue value.",
+                "example": ".primary { background: hsl(210, 80%, 50%); } // A nice sky blue.\n.lighter { background: hsl(210, 80%, 80%); } // Same hue, lighter tint."
+              },
+              {
+                "topic": "12.4 Background Colors and Images",
+                "explanation": "`background-color` sets a solid fill. `background-image` sets an image (using `url()`). You can combine them: the image will overlay the color. This is useful for having a color fallback if the image fails to load.",
+                "use_case": "Setting a gradient via image, or a hero image with a color fallback.",
+                "example": ".box { background-color: #f0f0f0; background-image: url('pattern.png'); }"
+              },
+              {
+                "topic": "12.5 Controlling Background Repeats",
+                "explanation": "`background-repeat` controls if a tile repeats. `repeat` (default), `repeat-x` (horizontally), `repeat-y` (vertically), or `no-repeat`. You almost always use `no-repeat` for hero images and `repeat` for subtle textures.",
+                "use_case": "A seamless tile pattern for a background.",
+                "example": ".pattern { background-image: url('dots.png'); background-repeat: repeat; }"
+              },
+              {
+                "topic": "12.6 Background Positioning",
+                "explanation": "`background-position` places the image. It takes two values (x y): `left`, `center`, `right`, `top`, `bottom`, or percentages/pixels. `center center` is the most common to center a background image.",
+                "use_case": "A hero image where the focal point is a person's face; you might use `background-position: 20% 80%` to keep the face centered in the container.",
+                "example": ".cover { background-image: url('hero.jpg'); background-position: center center; }"
+              },
+              {
+                "topic": "12.7 Background Sizing (`cover`, `contain`, custom)",
+                "explanation": "`background-size` defines how big the image is. `cover` scales the image to cover the entire container, cropping if necessary (best for full-page backgrounds). `contain` scales the image to fit *inside* the container without cropping, leaving empty spaces (best for logos). You can also use specific widths/heights.",
+                "use_case": "Full-screen landing page: `background-size: cover;`.",
+                "example": ".hero { background-image: url('sky.jpg'); background-size: cover; background-position: center; }"
+              },
+              {
+                "topic": "12.8 Background Attachment (`fixed` vs `scroll`)",
+                "explanation": "`background-attachment: fixed` makes the background image fixed relative to the viewport, creating a parallax effect where the content scrolls over it. `scroll` (default) makes the image scroll with the page. `fixed` is heavy on performance, so use sparingly.",
+                "use_case": "Creating a 'parallax' landing page section where the background stays still.",
+                "example": ".parallax-section { background-image: url('mountains.jpg'); background-attachment: fixed; background-size: cover; }"
+              },
+              {
+                "topic": "12.9 Linear-Gradients (Straight, Angled, Multi-color)",
+                "explanation": "Linear gradients are generated images. `linear-gradient(direction, color1, color2, color3...)`. Direction can be `to bottom`, `to right`, `to top left`, or an angle (45deg). You can add color stops with percentages: `linear-gradient(to right, red 0%, blue 50%, green 100%)`. This eliminates the need for actual image files for simple color transitions.",
+                "use_case": "Button backgrounds, subtle page backgrounds, or vibrant hero section overlays.",
+                "example": ".btn { background: linear-gradient(to bottom, #3498db, #2980b9); }\n.hero-overlay { background: linear-gradient(45deg, rgba(0,0,0,0.8), rgba(0,0,0,0.2)); }"
+              },
+              {
+                "topic": "12.10 Radial-Gradients (Circle, Ellipse)",
+                "explanation": "Radial gradients radiate from a center point. `radial-gradient(shape size at position, color1, color2)`. Shape can be `circle` or `ellipse`. The default is ellipse. This is excellent for creating glowing effects or spotlight effects.",
+                "use_case": "A glowing button or a background spotlight effect.",
+                "example": ".glow { background: radial-gradient(circle at center, #ff6b6b, #ee5a24); }\n.spotlight { background: radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.3), transparent 70%); }"
+              }
+            ]
+          },
+          {
+            "chapter_number": 13,
+            "chapter_title": "Typography (Making Text Beautiful)",
+            "topics": [
+              {
+                "topic": "13.1 `font-family`: Web-safe fonts, custom fonts, and fallbacks",
+                "explanation": "`font-family` defines the typeface. A 'web-safe' font is one installed on most operating systems (e.g., Arial, Times New Roman, Georgia). To use custom fonts, we import them. You should always provide a fallback list: `font-family: 'CustomFont', Arial, sans-serif;` The browser goes down the list until it finds one available. The generic families (`serif`, `sans-serif`, `monospace`) act as ultimate fallbacks.",
+                "use_case": "Using a Google Font for brand identity but falling back to system fonts for speed.",
+                "example": "body { font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif; }"
+              },
+              {
+                "topic": "13.2 Importing Google Fonts",
+                "explanation": "Google Fonts are free, open-source fonts. You can import them either via an `<link>` tag in your HTML `<head>` or via the `@import` rule in your CSS. The `<link>` method is faster because it loads parallel with your HTML. Always request only the weights you need (e.g., `400,700`) to reduce load time. Use `display=swap` to ensure text is visible immediately while fonts load (avoiding invisible text flicker).",
+                "use_case": "Embedding a distinctive font like 'Roboto' for a modern dashboard.",
+                "example": "In HTML: `<link href='https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap' rel='stylesheet'>`\nIn CSS: `body { font-family: 'Roboto', sans-serif; }`"
+              },
+              {
+                "topic": "13.3 `font-size`: Pixels (px), Ems, Rems, Viewport Units (vw)",
+                "explanation": "`px` is absolute and ignores user settings (bad for accessibility). `em` is relative to the parent element's font size. `rem` is relative to the root (`<html>`) font size. `rem` is the gold standard for accessibility because changing the root font size in the browser scales the entire page proportionally. `vw` (viewport width) is relative to the browser width, useful for responsive headings but can make text too small on mobile.",
+                "use_case": "Always use `rem` for text, `rem` or `px` for margins/paddings (but `rem` is safer).",
+                "example": "html { font-size: 16px; } /* 1rem = 16px */\np { font-size: 1rem; } /* 16px */\nh1 { font-size: 2.5rem; } /* 40px */\n.small { font-size: 0.8rem; } /* 12.8px */"
+              },
+              {
+                "topic": "13.4 `font-weight`: Normal, bold, bolder, numeric",
+                "explanation": "`font-weight` controls thickness. Values: `100` (thin), `300` (light), `400` (normal), `500` (medium), `700` (bold), `900` (black). The font must support the weight you request. Google Fonts require you to include these weights when importing. `bolder` and `lighter` relative to the parent are rarely used.",
+                "use_case": "Headings are usually `700`. Body text is `400`.",
+                "example": "h1 { font-weight: 700; }\np { font-weight: 400; }\n.emphasis { font-weight: 600; }"
+              },
+              {
+                "topic": "13.5 `font-style`: Normal, italic, oblique",
+                "explanation": "`italic` uses a specially designed cursive version of the font. `oblique` simply slants the regular version. Most fonts have italic variants. Use this for emphasis or quotes.",
+                "use_case": "Styling blockquotes or citations.",
+                "example": ".quote { font-style: italic; }"
+              },
+              {
+                "topic": "13.6 `text-transform`: Uppercase, lowercase, capitalize",
+                "explanation": "This changes the case of text without changing the HTML content. `uppercase` makes everything uppercase, `lowercase` makes everything lowercase, `capitalize` capitalizes the first letter of each word. Useful for styling buttons and headings consistently.",
+                "use_case": "Navigation links are often styled as `text-transform: uppercase;`.",
+                "example": ".nav a { text-transform: uppercase; letter-spacing: 0.05em; }"
+              },
+              {
+                "topic": "13.7 `text-decoration`: Underline, overline, line-through, none",
+                "explanation": "This adds lines to text. `underline` is standard for links, but you often remove it on navigation links with `none`. `line-through` indicates deleted text. `overline` is rarely used.",
+                "use_case": "Removing link underlines globally, then adding them back on hover.",
+                "example": "a { text-decoration: none; }\na:hover { text-decoration: underline; }\n.discount { text-decoration: line-through; }"
+              },
+              {
+                "topic": "13.8 `text-align`: Left, right, center, justify",
+                "explanation": "`text-align` aligns inline content within its block container. `left` (default for LTR languages), `right`, `center`, `justify` (stretches lines to have equal width, creating newspaper effect).",
+                "use_case": "Centering headings (`text-align: center;`).",
+                "example": "h1 { text-align: center; }\n.footer { text-align: right; }\n.article { text-align: justify; }"
+              },
+              {
+                "topic": "13.9 `line-height`: The space between lines",
+                "explanation": "Line-height is the vertical distance between lines of text. A value of `1.5` means 1.5 times the font size. A value of `1` makes lines touch each other (too tight). Accessibility guidelines recommend at least `1.5` for body text to improve readability. It is often set as a unitless number.",
+                "use_case": "Making body text highly readable.",
+                "example": "body { line-height: 1.6; }\nh1 { line-height: 1.2; } // Tighter for headings."
+              },
+              {
+                "topic": "13.10 `letter-spacing` and `word-spacing`",
+                "explanation": "`letter-spacing` (tracking) adds space between characters. `word-spacing` adds space between words. Use small amounts (like `0.05em`) to improve readability in headings or create a high-end brand feel. Negative values can create a condensed effect.",
+                "use_case": "Styling a luxury brand logo or all-caps headings.",
+                "example": ".brand-name { letter-spacing: 0.2em; }\n.all-caps { letter-spacing: 0.1em; text-transform: uppercase; }"
+              },
+              {
+                "topic": "13.11 Text Shadows (`text-shadow`: x, y, blur, color)",
+                "explanation": "`text-shadow` applies a shadow to text. The syntax is `x-offset y-offset blur-radius color`. Multiple shadows can be comma-separated. A subtle shadow can make white text pop over images. A deep shadow can create a dramatic 3D effect.",
+                "use_case": "Hero text over a busy background image.",
+                "example": "h1 { text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }\n/* Glowing effect */\n.glow { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }"
+              },
+              {
+                "topic": "13.12 Handling Overflow Text: `white-space`, `text-overflow: ellipsis`",
+                "explanation": "Sometimes text is too long. `white-space: nowrap` prevents text from wrapping. `overflow: hidden` hides the overflow. `text-overflow: ellipsis` adds `...` to indicate truncated text. This is critical for UI components where you have limited space (like product titles or notification bars).",
+                "use_case": "A product card where the title must stay on one line.",
+                "example": ".product-title {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  max-width: 200px;\n}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 3,
+        "part_title": "THE ENGINE (CSS Layout, Positioning & Responsiveness)",
+        "description": "This is where we master space. You will learn how to position every single box on the page using Flow, Flexbox, and Grid, and make them adapt to any screen.",
+        "chapters": [
+          {
+            "chapter_number": 14,
+            "chapter_title": "The CSS Box Model (Deep Dive)",
+            "topics": [
+              {
+                "topic": "14.1 Understanding `content-box` vs `border-box`",
+                "explanation": "Every element is a rectangular box. `box-sizing` defines how `width` and `height` are calculated. In `content-box` (default), the `width` applies only to the content. Padding and border are added on top, making the total width larger than expected. In `border-box`, the `width` includes the padding and border. This is infinitely easier. Most developers use a universal reset: `* { box-sizing: border-box; }`.",
+                "use_case": "Without `border-box`, if you set `width: 100%` and add `padding: 20px`, the element overflows. With `border-box`, it stays perfectly within its container.",
+                "example": "/* Reset */\n* { box-sizing: border-box; }\n\n.box {\n  width: 300px;\n  padding: 20px;\n  border: 5px solid black;\n  /* In border-box, total width = 300px. In content-box, total width = 300 + 40 + 10 = 350px */\n}"
+              },
+              {
+                "topic": "14.2 Padding: Inner Space",
+                "explanation": "Padding is the internal space between the content and the border. It is inside the box. It affects the element's size. You can set it for individual sides: `padding-top`, `padding-right`, `padding-bottom`, `padding-left`. Shorthand: `padding: top right bottom left` (clockwork), or `padding: top/bottom left/right`.",
+                "use_case": "Adding breathing room inside a button so the text isn't touching the edges.",
+                "example": ".btn { padding: 12px 24px; } /* 12px top/bottom, 24px left/right */"
+              },
+              {
+                "topic": "14.3 Borders: Width, Style, Color",
+                "explanation": "Border is the edge of the box. `border-width`, `border-style` (solid, dotted, dashed, double, groove, ridge, inset, outset), `border-color`. Shorthand: `border: 1px solid red;` You can target individual sides with `border-top`, etc. Border-radius rounds the corners.",
+                "use_case": "Drawing a distinct separator line around a card.",
+                "example": ".card { border: 1px solid #ddd; border-radius: 8px; }"
+              },
+              {
+                "topic": "14.4 Border-Radius: Making Circles",
+                "explanation": "`border-radius` rounds the corners. A single value applies to all corners. Two values (e.g., `10px / 20px`) control horizontal/vertical. Setting `border-radius: 50%` on a square makes a perfect circle.",
+                "use_case": "Avatar images are almost always circles.",
+                "example": ".avatar { width: 100px; height: 100px; border-radius: 50%; }\n.card { border-radius: 12px; }"
+              },
+              {
+                "topic": "14.5 Margins: Outer Space",
+                "explanation": "Margin is the space outside the box. It pushes other elements away. It does not affect the element's own size (unless negative). It does not have a background color. Shorthand works the same as padding.",
+                "use_case": "Creating space between paragraphs or between a card and its container.",
+                "example": "p { margin-bottom: 1rem; }\n.card { margin: 20px; }"
+              },
+              {
+                "topic": "14.6 Margin Collapse",
+                "explanation": "When two vertical margins meet, they collapse into one. The larger margin wins. This only happens for vertical (top/bottom) margins between adjacent block-level elements. It does not happen with flex/grid items, floats, or absolute positioning. This is often confusing to beginners. It prevents excessive spacing.",
+                "use_case": "If you have an `h1` with `margin-bottom: 20px` and a `p` with `margin-top: 30px`, the space between them is 30px (the larger one), not 50px.",
+                "example": "h1 { margin-bottom: 20px; }\np { margin-top: 30px; }\n<!-- The gap between h1 and p is 30px -->"
+              },
+              {
+                "topic": "14.7 `width`, `height`, `min-width`, `max-width`",
+                "explanation": "`width` and `height` set explicit dimensions. `max-width` prevents an element from growing beyond a certain point (critical for responsive design). `min-width` prevents it from shrinking below a point. `max-width: 100%` ensures an image never exceeds its container width, which is a classic fix for responsive images.",
+                "use_case": "Making images responsive: `img { max-width: 100%; height: auto; }`.",
+                "example": ".container { max-width: 1200px; margin: 0 auto; }\nimg { max-width: 100%; height: auto; }"
+              }
+            ]
+          },
+          {
+            "chapter_number": 15,
+            "chapter_title": "Traditional Positioning (Moving Elements Around)",
+            "topics": [
+              {
+                "topic": "15.1 Static Positioning (the default flow)",
+                "explanation": "`position: static` is the default. Elements are laid out in the normal document flow (top to bottom, left to right). The `top`, `right`, `bottom`, `left` properties have no effect on static elements.",
+                "use_case": "Most content is static. You don't need to change it unless you want to break the flow.",
+                "example": "div { position: static; } // This is default; you never need to write it."
+              },
+              {
+                "topic": "15.2 Relative Positioning (`position: relative`)",
+                "explanation": "Relative positioning keeps the element in the normal flow, but allows you to nudge it from its original position using `top`, `left`, etc. The original space is preserved. It also acts as a containing block for absolutely positioned children.",
+                "use_case": "Slightly tweaking an icon's alignment, or creating a container for absolute positioning.",
+                "example": ".icon { position: relative; top: 2px; } // Moves it down 2px from its original spot."
+              },
+              {
+                "topic": "15.3 Absolute Positioning (`position: absolute`)",
+                "explanation": "Absolute positioning removes the element from the normal flow entirely. It no longer affects siblings. It is positioned relative to its nearest positioned ancestor (an ancestor with a `position` value other than `static`). If none exists, it goes to the `<html>` element (the viewport). You use `top`, `right`, `bottom`, `left` to place it.",
+                "use_case": "A close button (X) in the top-right corner of a modal or a badge on an avatar.",
+                "example": ".parent { position: relative; }\n.badge {\n  position: absolute;\n  top: -10px;\n  right: -10px;\n  background: red;\n  border-radius: 50%;\n}"
+              },
+              {
+                "topic": "15.4 Fixed Positioning (`position: fixed`)",
+                "explanation": "Fixed positioning removes the element from the flow and positions it relative to the viewport (the browser window). It stays in the same place even when the page scrolls. This is used for persistent UI elements.",
+                "use_case": "A sticky navbar, a 'Back to Top' button, a floating chat widget.",
+                "example": ".navbar { position: fixed; top: 0; left: 0; width: 100%; background: white; z-index: 1000; }"
+              },
+              {
+                "topic": "15.5 Sticky Positioning (`position: sticky`)",
+                "explanation": "Sticky is a hybrid. It is treated as `relative` until it crosses a certain threshold (e.g., `top: 0`), at which point it becomes `fixed` and sticks to that threshold. It is great for section headers within a scrolling container.",
+                "use_case": "A table header that stays at the top of the table while scrolling, or a category title that sticks to the top of a list.",
+                "example": ".section-title { position: sticky; top: 0; background: #fff; z-index: 10; }"
+              },
+              {
+                "topic": "15.6 The `z-index` Property: Stacking Order",
+                "explanation": "`z-index` controls the stack order of positioned elements (relative, absolute, fixed, sticky). Higher numbers appear on top of lower numbers. It only works on positioned elements. The default stack order is based on the order in the HTML (later elements on top). Negative values can put elements behind the background.",
+                "use_case": "Ensuring a modal popup appears above everything else.",
+                "example": ".modal { position: fixed; z-index: 9999; }\n.overlay { position: fixed; z-index: 9998; }"
+              },
+              {
+                "topic": "15.7 The `overflow` Property: `visible`, `hidden`, `scroll`, `auto`",
+                "explanation": "Overflow controls what happens when content is too big for its container. `visible` (default) lets it spill out. `hidden` clips the excess. `scroll` adds scrollbars (even if not needed). `auto` adds scrollbars only if needed. `overflow-x` and `overflow-y` control axes independently.",
+                "use_case": "A fixed-height card that shows a scrollbar if the text is too long.",
+                "example": ".card { height: 200px; overflow-y: auto; }"
+              }
+            ]
+          },
+          {
+            "chapter_number": 16,
+            "chapter_title": "Flexbox - The One-Dimensional Layout God",
+            "topics": [
+              {
+                "topic": "16.1 `display: flex` (activating the flex container)",
+                "explanation": "Declaring `display: flex` on a container turns its direct children into 'flex items'. This enables a powerful one-dimensional layout system (either row or column). The children are automatically laid out side-by-side (in a row) by default.",
+                "use_case": "Creating a horizontal navigation bar.",
+                "example": ".nav { display: flex; }"
+              },
+              {
+                "topic": "16.2 `flex-direction`: Row, row-reverse, column, column-reverse",
+                "explanation": "Defines the main axis. `row` (default) is horizontal left-to-right. `row-reverse` reverses that. `column` is vertical top-to-bottom. `column-reverse` reverses that.",
+                "use_case": "Changing a layout from horizontal to vertical for mobile (though you usually use wrap for that).",
+                "example": ".sidebar { display: flex; flex-direction: column; }"
+              },
+              {
+                "topic": "16.3 `flex-wrap`: Nowrap, wrap, wrap-reverse",
+                "explanation": "By default, flex items try to fit on one line (`nowrap`). `wrap` allows them to break onto multiple lines if they overflow the container. `wrap-reverse` wraps in the opposite direction.",
+                "use_case": "A grid of cards that wraps to the next row when the screen is narrow.",
+                "example": ".card-grid { display: flex; flex-wrap: wrap; }"
+              },
+              {
+                "topic": "16.4 `justify-content` (main-axis alignment)",
+                "explanation": "Aligns items along the main axis (row or column). `flex-start` (default, packed at start), `flex-end` (packed at end), `center` (packed in middle), `space-between` (first at start, last at end, equal space between), `space-around` (equal space around each item), `space-evenly` (equal space including edges).",
+                "use_case": "Centering a button inside a container, or spreading navigation links evenly.",
+                "example": ".flex-center { display: flex; justify-content: center; }"
+              },
+              {
+                "topic": "16.5 `align-items` (cross-axis alignment)",
+                "explanation": "Aligns items along the cross axis (perpendicular to main axis). `stretch` (default, items stretch to fill container), `flex-start` (pack at start), `flex-end` (pack at end), `center` (centered on cross axis), `baseline` (aligns by text baseline).",
+                "use_case": "Centering text vertically inside a button, or aligning all items to the top.",
+                "example": ".flex-header { display: flex; align-items: center; } // Vertically centers logo and nav items."
+              },
+              {
+                "topic": "16.6 `align-content` (multiple rows alignment)",
+                "explanation": "When you have multiple lines (due to `flex-wrap: wrap`), `align-content` controls the spacing between those lines. It works exactly like `justify-content` but on the cross-axis. It has no effect on a single line.",
+                "use_case": "Evenly distributing rows of items in a large container.",
+                "example": ".wrap-grid { display: flex; flex-wrap: wrap; align-content: space-around; }"
+              },
+              {
+                "topic": "16.7 The `gap` property",
+                "explanation": "`gap` defines the exact spacing between flex items (both row and column). It replaces the need for margin hacks. It is a simpler, more predictable alternative to margins on flex items.",
+                "use_case": "Creating equal spacing between cards.",
+                "example": ".card-grid { display: flex; flex-wrap: wrap; gap: 20px; }"
+              },
+              {
+                "topic": "16.8 Flex item properties: `flex-grow`, `flex-shrink`, `flex-basis`",
+                "explanation": "These are applied to the child items. `flex-grow` is a number. If set to 1, the item can expand to fill available space. `flex-shrink` is a number; 1 allows it to shrink. `flex-basis` defines the initial size before growing/shrinking (`auto` means look at width property).",
+                "use_case": "Making a sidebar take up a fixed 200px, and the main content take up the rest.",
+                "example": ".sidebar { flex: 0 0 200px; } /* don't grow, don't shrink, basis 200px */\n.main { flex: 1; } /* takes up remaining space */"
+              },
+              {
+                "topic": "16.9 The `flex` shorthand",
+                "explanation": "`flex: 1` is shorthand for `flex-grow: 1; flex-shrink: 1; flex-basis: 0%`. `flex: none` is `0 0 auto`. `flex: 0 1 auto` is the default. Using shorthand is cleaner.",
+                "use_case": "Creating equal-width columns: `flex: 1` on all items.",
+                "example": ".equal-column { flex: 1; }"
+              },
+              {
+                "topic": "16.10 `align-self` (overriding individual items)",
+                "explanation": "`align-self` allows a single flex item to override the `align-items` value set on its parent. Values: `auto`, `stretch`, `center`, `flex-start`, `flex-end`.",
+                "use_case": "Having one button in a row be taller than the rest.",
+                "example": ".special-item { align-self: flex-end; }"
+              }
+            ]
+          },
+          {
+            "chapter_number": 17,
+            "chapter_title": "CSS Grid - The Two-Dimensional Layout King",
+            "topics": [
+              {
+                "topic": "17.1 `display: grid`",
+                "explanation": "Declaring `display: grid` turns a container into a grid context. Its direct children become grid items. Grid is two-dimensional, handling rows and columns simultaneously—unlike flex which handles one dimension at a time.",
+                "use_case": "Designing the main page layout (header, sidebar, main, footer).",
+                "example": ".page { display: grid; }"
+              },
+              {
+                "topic": "17.2 Defining Columns: `grid-template-columns`",
+                "explanation": "Defines the number and width of columns. Values: `px`, `%`, `fr` units, `auto`, `minmax()`, `repeat()`. `fr` is fractional unit, representing available space. `repeat(3, 1fr)` creates 3 equal columns.",
+                "use_case": "Creating a 3-column magazine layout.",
+                "example": ".grid { display: grid; grid-template-columns: 1fr 1fr 1fr; } /* 3 equal columns */"
+              },
+              {
+                "topic": "17.3 Defining Rows: `grid-template-rows`",
+                "explanation": "Defines the number and height of rows. Similar syntax to columns. If you don't define rows, they are auto-sized to fit content.",
+                "use_case": "Setting a fixed-height header and footer.",
+                "example": ".page { display: grid; grid-template-rows: 100px auto 50px; }"
+              },
+              {
+                "topic": "17.4 The `fr` Unit explained",
+                "explanation": "`fr` stands for 'fraction'. It distributes the remaining space. If you have `1fr 2fr`, the second column takes twice as much space as the first. It's like `flex-grow` but for grid.",
+                "use_case": "A classic sidebar + main layout: `grid-template-columns: 250px 1fr;`",
+                "example": ".sidebar-layout { display: grid; grid-template-columns: 250px 1fr; }"
+              },
+              {
+                "topic": "17.5 `grid-template-areas` (naming your layout)",
+                "explanation": "This is the most readable way to define a grid. You define named areas in a string grid (like ASCII art). Then assign items to these areas using `grid-area`. This makes the layout completely understandable at a glance.",
+                "use_case": "Clearly defining page sections.",
+                "example": ".page {\n  display: grid;\n  grid-template-columns: 1fr 3fr;\n  grid-template-rows: auto 1fr auto;\n  grid-template-areas:\n    'header header'\n    'sidebar main'\n    'footer footer';\n}\n.header { grid-area: header; }\n.sidebar { grid-area: sidebar; }\n.main { grid-area: main; }\n.footer { grid-area: footer; }"
+              },
+              {
+                "topic": "17.6 Grid gaps: `column-gap`, `row-gap`, `gap`",
+                "explanation": "`gap` creates gutters between grid cells without adding margin. It is a property on the grid container. `gap: 20px` sets both row and column gaps.",
+                "use_case": "Adding spacing between product cards.",
+                "example": ".product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }"
+              },
+              {
+                "topic": "17.7 `justify-items` and `align-items` (placing items inside their cells)",
+                "explanation": "These properties control the alignment of grid items *within* their individual cells. `justify-items` (horizontal alignment) and `align-items` (vertical alignment). Values: `stretch` (default), `start`, `end`, `center`.",
+                "use_case": "Centering a button inside a cell without using margin:auto.",
+                "example": ".cell { display: grid; justify-items: center; align-items: center; }"
+              },
+              {
+                "topic": "17.8 `justify-content` and `align-content` (sizing the entire grid)",
+                "explanation": "When the grid's total size is smaller than the container, these properties align the *entire grid* within the container. Similar to Flexbox's `justify-content`, values include `center`, `space-between`, `space-around`.",
+                "use_case": "Centering a small fixed-size grid within a larger div.",
+                "example": ".container { display: grid; grid-template-columns: 200px 200px; justify-content: center; }"
+              },
+              {
+                "topic": "17.9 Grid item placement: `grid-column`, `grid-row`, `span`",
+                "explanation": "You can specify exactly where an item starts and ends using grid lines (numbered 1 to n). `grid-column: 1 / 3` spans from line 1 to line 3 (takes 2 columns). `grid-column: span 2` spans 2 columns without knowing the end line. This allows for complex, non-rectangular layouts.",
+                "use_case": "A featured article that spans two columns, while others span one.",
+                "example": ".featured { grid-column: 1 / 3; grid-row: 1 / 2; }\n.small-item { grid-column: 3 / 4; }"
+              },
+              {
+                "topic": "17.10 The `grid-area` shorthand",
+                "explanation": "`grid-area` can combine `grid-row-start`, `grid-column-start`, `grid-row-end`, `grid-column-end` in one line: `grid-area: 1 / 1 / 3 / 3`. It is also used to assign elements to named `grid-template-areas`.",
+                "use_case": "Quickly positioning an item without writing four lines.",
+                "example": ".big-box { grid-area: 1 / 1 / 3 / 3; }"
+              },
+              {
+                "topic": "17.11 Using `minmax()` and `auto-fit` / `auto-fill`",
+                "explanation": "`minmax(200px, 1fr)` means 'a column must be at least 200px but can grow to 1fr'. `repeat(auto-fit, minmax(250px, 1fr))` is the holy grail of responsive grids: it creates as many columns as fit, each at least 250px wide, and wraps gracefully. `auto-fill` will create empty columns to fill the row; `auto-fit` will stretch the items to fill the row.",
+                "use_case": "A fully responsive product grid that adapts from 1 column on mobile to 5 columns on desktop.",
+                "example": ".responsive-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n  gap: 20px;\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 18,
+            "chapter_title": "Responsive Web Design (Fitting Every Screen)",
+            "topics": [
+              {
+                "topic": "18.1 The Viewport Meta Tag",
+                "explanation": "Mobile browsers render pages in a virtual viewport (usually 980px) and shrink it to fit the screen. This tag tells the browser to use the actual device width: `<meta name='viewport' content='width=device-width, initial-scale=1.0'>`. This is the mandatory first step for any responsive site.",
+                "use_case": "Without this, your site will look like a zoomed-out desktop on phones.",
+                "example": "Always include this in your `<head>`."
+              },
+              {
+                "topic": "18.2 Relative Units Deep Dive: `em`, `rem`, `%`, `vh`, `vw`, `vmin`, `vmax`",
+                "explanation": "`em` = relative to parent font-size. `rem` = relative to root font-size. `%` = relative to parent dimensions. `vh` = viewport height (1vh = 1% of browser height). `vw` = viewport width. `vmin` = smaller of vh/vw. `vmax` = larger. Use `rem` for fonts and spacing to maintain accessibility. Use `vh` for full-screen hero sections. Use `%` for fluid widths.",
+                "use_case": "A hero section: `height: 100vh; width: 100%;` covers the entire screen.",
+                "example": ".hero { height: 100vh; display: flex; justify-content: center; align-items: center; }"
+              },
+              {
+                "topic": "18.3 CSS Media Queries: `@media`",
+                "explanation": "Media queries are the 'if statements' of CSS. They apply styles only when certain conditions are met, typically screen width. Syntax: `@media (max-width: 768px) { ... }`. You can use `min-width` (mobile-first) or `max-width` (desktop-first).",
+                "use_case": "Hiding a sidebar on mobile.",
+                "example": ".sidebar { display: block; }\n@media (max-width: 768px) {\n  .sidebar { display: none; }\n}"
+              },
+              {
+                "topic": "18.4 Breakpoints: Common device sizes",
+                "explanation": "Breakpoints are specific widths where your layout changes. Common ones: 576px (small phones), 768px (tablets), 992px (laptops), 1200px (large desktops). Design 'Mobile-First' – write the base CSS for small screens, then use `min-width` media queries to add complexity for larger screens.",
+                "use_case": "Building a responsive layout that stacks columns on mobile and places them side-by-side on desktop.",
+                "example": ".col { width: 100%; }\n@media (min-width: 768px) { .col { width: 50%; } }\n@media (min-width: 992px) { .col { width: 33.33%; } }"
+              },
+              {
+                "topic": "18.5 Hiding/Showing elements based on screen size",
+                "explanation": "Use `display: none` within media queries to hide elements. Use `display: block` to show them. This is used for 'mobile hamburger menus' or hiding large images on mobile to save bandwidth.",
+                "use_case": "Showing a mobile icon that is hidden on desktop.",
+                "example": ".mobile-menu { display: block; }\n.desktop-menu { display: none; }\n@media (min-width: 768px) {\n  .mobile-menu { display: none; }\n  .desktop-menu { display: block; }\n}"
+              },
+              {
+                "topic": "18.6 Responsive images with `srcset` and `<picture>`",
+                "explanation": "`srcset` allows you to provide multiple image sources with their widths. The browser picks the best one. `<picture>` allows full art direction (different crops). This saves mobile users from downloading massive desktop images.",
+                "use_case": "Product page: mobile users get a 400px wide image, desktop users get 1200px.",
+                "example": "<img src='default.jpg' srcset='small.jpg 400w, large.jpg 1200w' sizes='(max-width: 600px) 400px, 1200px' alt='...'>"
+              },
+              {
+                "topic": "18.7 Container Queries",
+                "explanation": "Container queries are the newest evolution. They allow an element to style itself based on the size of its *parent container*, not the viewport. This makes components truly reusable. They are supported in all modern browsers. You use `container-type: inline-size;` on the parent.",
+                "use_case": "A card component that changes layout depending on whether its parent container is narrow or wide.",
+                "example": ".card-container { container-type: inline-size; }\n@container (min-width: 400px) {\n  .card { display: flex; }\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 19,
+            "chapter_title": "Pseudo-Classes, Pseudo-Elements, and Magic Tricks",
+            "topics": [
+              {
+                "topic": "19.1 Pseudo-classes for links: `:link`, `:visited`, `:hover`, `:active`",
+                "explanation": "Pseudo-classes target elements in a specific state. For links: `:link` (unvisited), `:visited` (visited), `:hover` (mouse over), `:active` (clicking). Order matters for links: L-V-H-A (LoVe HAte).",
+                "use_case": "Styling a primary navigation.",
+                "example": "a { color: blue; }\na:hover { color: red; text-decoration: underline; }\na:visited { color: purple; }"
+              },
+              {
+                "topic": "19.2 Input states: `:focus`, `:checked`, `:disabled`, `:required`, `:valid`, `:invalid`",
+                "explanation": "`:focus` is when an input is selected (tabbed or clicked). `:checked` for radio/checkbox. `:disabled` for disabled fields. `:required` for required fields. `:valid` and `:invalid` are powerful—browsers can validate email/pattern fields without any JavaScript, and you can style them green/red.",
+                "use_case": "Highlighting invalid form fields with a red border before submission.",
+                "example": "input:focus { outline: 2px solid blue; }\ninput:invalid { border-color: red; }\ninput:valid { border-color: green; }"
+              },
+              {
+                "topic": "19.3 Structural pseudo-classes: `:first-child`, `:last-child`, `:nth-child()`",
+                "explanation": "These target children based on their order among siblings. `:nth-child(odd)` selects odd children. `:nth-child(3n+1)` selects every third. `:first-child` and `:last-child` are obvious. `:nth-of-type()` works similarly but ignores element types (targets type specifically).",
+                "use_case": "Zebra-striping a table: `tr:nth-child(even) { background: #f2f2f2; }`",
+                "example": "li:nth-child(1) { font-weight: bold; } // First item bold"
+              },
+              {
+                "topic": "19.4 Empty elements: `:empty`",
+                "explanation": "`:empty` selects elements that have no children (including text nodes). Useful for hiding empty containers.",
+                "use_case": "Hiding a `.error` container if the error message is empty.",
+                "example": ".error:empty { display: none; }"
+              },
+              {
+                "topic": "19.5 Negation: `:not()` selector",
+                "explanation": "`:not()` selects everything except the specified selector. It is incredibly useful. It has low specificity.",
+                "use_case": "Applying margin to all paragraphs except the first one.",
+                "example": "p:not(:first-of-type) { margin-top: 20px; }"
+              },
+              {
+                "topic": "19.6 Pseudo-elements: `::before` and `::after`",
+                "explanation": "Pseudo-elements are virtual elements created by CSS. `::before` inserts content before the element's actual content, `::after` inserts it after. They require the `content` property. They are essentially extra boxes you can style. They are inline by default.",
+                "use_case": "Adding an icon before a list item, or clearing floats, or adding decorative quotes.",
+                "example": ".quote::before { content: '\u201C'; font-size: 30px; }\n.quote::after { content: '\u201D'; }\n\nul li::before { content: '\u2713'; color: green; margin-right: 10px; }"
+              },
+              {
+                "topic": "19.7 The `::first-letter` and `::first-line`",
+                "explanation": "These target the first letter and first line of a block of text. They are used for drop caps or initial caps in print-style design.",
+                "use_case": "A magazine-style drop cap.",
+                "example": "p::first-letter { font-size: 3em; font-weight: bold; float: left; margin-right: 5px; }"
+              },
+              {
+                "topic": "19.8 The `::selection` pseudo-element",
+                "explanation": "This styles the portion of text that a user highlights with their mouse. It changes the default blue highlight.",
+                "use_case": "Branding the user selection to match your theme.",
+                "example": "::selection { background: #ffdd57; color: #333; }"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 4,
+        "part_title": "THE MOTION (CSS Animations, Transforms & Advanced Effects)",
+        "description": "Static pages are dead. We breathe life into our designs with smooth transitions, 2D/3D transformations, and complex keyframe animations.",
+        "chapters": [
+          {
+            "chapter_number": 20,
+            "chapter_title": "CSS Transforms (2D & 3D Space)",
+            "topics": [
+              {
+                "topic": "20.1 The `transform` property: `translate()`, `rotate()`, `scale()`, `skew()`",
+                "explanation": "`transform` modifies the coordinate space of an element. `translate(x, y)` moves it. `rotate(angle)` spins it. `scale(x, y)` changes its size. `skew(x, y)` tilts it. Transforms are extremely performant because they use GPU acceleration and don't cause layout reflows.",
+                "use_case": "A hover effect on a button: `transform: scale(1.05);`",
+                "example": ".card:hover { transform: scale(1.02) translateY(-5px); }"
+              },
+              {
+                "topic": "20.2 Combining Transforms",
+                "explanation": "You can combine multiple transform functions separated by spaces. The order matters—first is applied first.",
+                "use_case": "Rotating and moving an element at the same time.",
+                "example": ".box { transform: translateX(100px) rotate(45deg); }"
+              },
+              {
+                "topic": "20.3 Transform-origin",
+                "explanation": "`transform-origin` changes the pivot point (the anchor) for transforms. By default, it is `center center`. You can set it to `top left`, `bottom right`, or specific pixel values.",
+                "use_case": "Rotating a door element from its left hinge.",
+                "example": ".door { transform-origin: left center; transform: rotateY(-120deg); }"
+              },
+              {
+                "topic": "20.4 3D Transforms: `rotateX()`, `rotateY()`, `perspective`, `translateZ()`",
+                "explanation": "3D transforms create depth. `rotateX` and `rotateY` rotate around axes. `perspective` is the distance from the viewer to the object (lower = more dramatic 3D effect). `translateZ` moves an object closer or further away. These are often used for flipping cards or parallax sliders.",
+                "use_case": "A 3D flipping card with a front and back.",
+                "example": ".card {\n  perspective: 600px;\n}\n.card-inner {\n  transform-style: preserve-3d;\n  transition: transform 0.6s;\n}\n.card:hover .card-inner {\n  transform: rotateY(180deg);\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 21,
+            "chapter_title": "Transitions (Smooth State Changes)",
+            "topics": [
+              {
+                "topic": "21.1 `transition-property`",
+                "explanation": "Specifies which CSS properties should animate. Use `all` for everything (convenient but heavy) or specific names like `opacity, transform`. Only animatable properties (colors, sizes, opacity, transform) work.",
+                "use_case": "Smoothly changing button color and size.",
+                "example": ".btn { transition-property: background-color, transform; }"
+              },
+              {
+                "topic": "21.2 `transition-duration`",
+                "explanation": "How long the animation takes (e.g., `0.3s` or `300ms`). 200-400ms is standard for micro-interactions.",
+                "use_case": "A fast hover effect.",
+                "example": ".btn { transition-duration: 0.2s; }"
+              },
+              {
+                "topic": "21.3 `transition-timing-function`",
+                "explanation": "Defines the speed curve. `ease` (start slow, fast, end slow), `linear` (constant speed), `ease-in` (slow start), `ease-out` (slow end), `ease-in-out`. `cubic-bezier()` allows custom curves. `steps()` for frame-by-frame animation.",
+                "use_case": "A bouncy button effect using `cubic-bezier(0.68, -0.55, 0.27, 1.55)`.",
+                "example": ".btn { transition-timing-function: ease-in-out; }"
+              },
+              {
+                "topic": "21.4 `transition-delay`",
+                "explanation": "Waits a specified time before starting the transition. Useful for staggered animations.",
+                "use_case": "A menu that slides down with a slight delay.",
+                "example": ".menu { transition-delay: 0.1s; }"
+              },
+              {
+                "topic": "21.5 The `transition` shorthand",
+                "explanation": "Order: property duration timing-function delay. `transition: all 0.3s ease 0s;`",
+                "use_case": "Clean, concise code.",
+                "example": ".btn { transition: background 0.3s, transform 0.2s ease; }"
+              },
+              {
+                "topic": "21.6 Which properties CAN be transitioned?",
+                "explanation": "You can only transition properties that have numeric intermediate values (interpolatable). This includes: `background-color`, `color`, `opacity`, `width`, `height`, `margin`, `padding`, `border-radius`, `font-size`, `transform`, `box-shadow`, etc. You cannot transition `display` (e.g., block to none) or `visibility` without a trick (use `opacity` + `visibility` with a delay).",
+                "use_case": "Fading an element out.",
+                "example": ".fade-out { opacity: 0; transition: opacity 0.5s; } // Works perfectly."
+              }
+            ]
+          },
+          {
+            "chapter_number": 22,
+            "chapter_title": "Keyframe Animations (Complex, Looping Motion)",
+            "topics": [
+              {
+                "topic": "22.1 The `@keyframes` rule",
+                "explanation": "Keyframes define a storyboard. You specify states at different percentages (0% to 100%). `from` is equivalent to 0%, `to` is 100%. You define the CSS properties that change.",
+                "use_case": "A loading spinner that rotates forever.",
+                "example": "@keyframes spin {\n  from { transform: rotate(0deg); }\n  to { transform: rotate(360deg); }\n}\n.loader { animation: spin 1s linear infinite; }"
+              },
+              {
+                "topic": "22.2 `animation-name` and `animation-duration`",
+                "explanation": "`animation-name` references the keyframes. `animation-duration` is the length of one cycle.",
+                "example": "spinner { animation-name: spin; animation-duration: 2s; }"
+              },
+              {
+                "topic": "22.3 `animation-iteration-count` (infinite or number)",
+                "explanation": "How many times the animation plays. `1` (default), `3`, or `infinite`.",
+                "use_case": "A pulsing notification dot.",
+                "example": ".dot { animation: pulse 1s infinite; }"
+              },
+              {
+                "topic": "22.4 `animation-direction`: normal, reverse, alternate, alternate-reverse",
+                "explanation": "`normal` plays forward. `reverse` plays backward. `alternate` plays forward, then backward (oscillates). `alternate-reverse` starts backward then forward.",
+                "use_case": "A smooth swaying effect.",
+                "example": ".swing { animation: sway 2s alternate infinite; }"
+              },
+              {
+                "topic": "22.5 `animation-fill-mode`: forwards, backwards, both",
+                "explanation": "Controls what styles apply before/after the animation. `forwards` keeps the final keyframe style. `backwards` applies the first keyframe style before the animation starts. `both` does both.",
+                "use_case": "A slide-in animation that stays visible at the end.",
+                "example": ".slide-in { animation: slide 0.5s forwards; }"
+              },
+              {
+                "topic": "22.6 `animation-play-state`: paused, running",
+                "explanation": "Allows you to pause/resume an animation via JavaScript.",
+                "use_case": "Pausing an animated banner when the user hovers over it.",
+                "example": ".banner:hover { animation-play-state: paused; }"
+              },
+              {
+                "topic": "22.7 The `animation` shorthand",
+                "explanation": "Order: name duration timing-function delay iteration-count direction fill-mode. `animation: spin 1s linear 0s infinite;`",
+                "example": ".complex { animation: spin 2s ease-in-out 0.5s infinite alternate; }"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 5,
+        "part_title": "THE BRAIN (JavaScript Core - Logic, Data, and Thinking)",
+        "description": "JavaScript is the world's most misunderstood language. We strip away the jargon and teach you how to think in logic, store data, make decisions, and repeat tasks.",
+        "chapters": [
+          {
+            "chapter_number": 23,
+            "chapter_title": "JavaScript Basics - The Console & Variables",
+            "topics": [
+              {
+                "topic": "23.1 Adding JS: The `<script>` tag",
+                "explanation": "Add JavaScript via the `<script>` tag. It can be internal (`<script> alert('hi'); </script>`) or external (`<script src='app.js'></script>`). Usually placed at the end of the `<body>` to ensure the HTML is loaded before the JS runs (or use `defer` in the head).",
+                "use_case": "Connecting your `main.js` file.",
+                "example": "<script src='js/main.js' defer></script>"
+              },
+              {
+                "topic": "23.2 The `console.log()` - Spying on your code",
+                "explanation": "`console.log()` prints messages to the browser's DevTools console. It is your primary debugging tool. You can log strings, numbers, arrays, objects, and even HTML elements. It doesn't affect the page, it's purely for developers.",
+                "use_case": "Checking the value of a variable at a specific moment.",
+                "example": "console.log('Hello World');\nlet x = 10;\nconsole.log('The value of x is: ', x);"
+              },
+              {
+                "topic": "23.3 JS Comments",
+                "explanation": "Comments are ignored by the JS engine. `//` for single-line comments. `/* */` for multi-line comments.",
+                "use_case": "Documenting complex logic.",
+                "example": "// This function adds two numbers\nfunction add(a, b) {\n  /* This is a multi-line comment\n     explaining the return */\n  return a + b;\n}"
+              },
+              {
+                "topic": "23.4 Variables: `let` and `const`",
+                "explanation": "Variables store data. `let` is mutable (can be changed). `const` is immutable (cannot be reassigned). Always use `const` by default. If you know you need to change it, use `let`. Never use `var` (it has function-scoping issues).",
+                "use_case": "Storing a user's name, or a counter.",
+                "example": "const name = 'John'; // cannot be changed\nlet count = 0; // can be changed\ncount = count + 1;"
+              },
+              {
+                "topic": "23.5 Naming conventions (camelCase, case-sensitivity)",
+                "explanation": "JS is case-sensitive (`myName` != `myname`). The standard is `camelCase` (first word lowercase, subsequent words capitalized). Variable names cannot start with numbers, and cannot be reserved keywords.",
+                "use_case": "Writing readable code.",
+                "example": "let firstName = 'Jane';\nlet totalPrice = 100;"
+              },
+              {
+                "topic": "23.6 Primitive Data Types: Strings, Numbers, Booleans, `undefined`, `null`",
+                "explanation": "Strings are text (`'hello'`, `'world'`). Numbers are integers and floats (`42`, `3.14`). Booleans are `true` or `false`. `undefined` is a variable declared but not assigned a value. `null` is explicitly empty.",
+                "use_case": "Storing user data and flags.",
+                "example": "let name = 'Alice'; // string\nlet age = 30; // number\nlet isLoggedIn = true; // boolean\nlet score = undefined; // not set yet\nlet result = null; // explicitly empty"
+              },
+              {
+                "topic": "23.7 The `typeof` operator",
+                "explanation": "`typeof` returns the type of a variable as a string. Useful for debugging and validation.",
+                "use_case": "Checking what type of data you have.",
+                "example": "typeof 'hello' // 'string'\ntypeof 42 // 'number'\ntypeof true // 'boolean'\ntypeof undefined // 'undefined'\ntypeof null // 'object' (this is a legacy bug in JS)"
+              }
+            ]
+          },
+          {
+            "chapter_number": 24,
+            "chapter_title": "Operators & Type Coercion",
+            "topics": [
+              {
+                "topic": "24.1 Arithmetic Operators: `+`, `-`, `*`, `/`, `%`, `**`",
+                "explanation": "Basic math. `%` is modulus (remainder after division). `**` is exponent (power).",
+                "use_case": "Calculating total price or checking if a number is even.",
+                "example": "5 + 3 // 8\n10 % 3 // 1 (10 divided by 3 leaves remainder 1)\n2 ** 3 // 8"
+              },
+              {
+                "topic": "24.2 Assignment Operators: `+=`, `-=`, `*=`, `/=`",
+                "explanation": "Shorthand for updating a variable's value.",
+                "use_case": "Incrementing a counter.",
+                "example": "let x = 5;\nx += 3; // x is now 8 (same as x = x + 3)"
+              },
+              {
+                "topic": "24.3 Increment (`++`) and Decrement (`--`)",
+                "explanation": "Adds 1 or subtracts 1. Can be prefix (`++x`) or postfix (`x++`). Postfix returns the old value, then increments; prefix increments then returns.",
+                "use_case": "Loop counters.",
+                "example": "let i = 0;\ni++; // i becomes 1"
+              },
+              {
+                "topic": "24.4 Comparison: `==` (loose) vs `===` (strict)",
+                "explanation": "`==` compares value but allows type coercion (e.g., `'5' == 5` is `true`). `===` compares both value AND type (e.g., `'5' === 5` is `false`). Always use `===` to avoid unexpected bugs.",
+                "use_case": "Checking if a password matches exactly.",
+                "example": "if (inputPassword === storedPassword) { // always strict"
+              },
+              {
+                "topic": "24.5 `!=` vs `!==`",
+                "explanation": "Same logic. `!=` is loose not-equal, `!==` is strict not-equal. Always use `!==`.",
+                "example": "5 !== '5' // true"
+              },
+              {
+                "topic": "24.6 Greater/Less Than: `>`, `<`, `>=`, `<=`",
+                "explanation": "Standard numeric comparisons.",
+                "use_case": "Checking if age is over 18.",
+                "example": "age >= 18"
+              },
+              {
+                "topic": "24.7 Logical Operators: `&&` (AND), `||` (OR), `!` (NOT)",
+                "explanation": "`&&` returns true if both are true. `||` returns true if at least one is true. `!` negates (true becomes false).",
+                "use_case": "Checking multiple conditions.",
+                "example": "if (isAdmin && isLoggedIn) { // both must be true }\nif (isGuest || isMember) { // either can be true }"
+              },
+              {
+                "topic": "24.8 The Nullish Coalescing Operator: `??`",
+                "explanation": "`??` returns the right-hand value only if the left-hand is `null` or `undefined`. Unlike `||`, it doesn't treat `0` or `''` as falsy.",
+                "use_case": "Providing a default value for a variable that might be undefined.",
+                "example": "let username = input ?? 'Guest'; // if input is null/undefined, use Guest"
+              },
+              {
+                "topic": "24.9 Type Coercion explained",
+                "explanation": "JS automatically converts types in certain contexts. `'5' + 5` becomes `'55'` (string concatenation). `'5' * 5` becomes `25` (number multiplication). This is the most common source of bugs for beginners.",
+                "use_case": "Always be explicit. Convert strings to numbers with `Number()`.",
+                "example": "'5' + 5 // '55'\nNumber('5') + 5 // 10"
+              }
+            ]
+          },
+          {
+            "chapter_number": 25,
+            "chapter_title": "Control Flow (Making Decisions)",
+            "topics": [
+              {
+                "topic": "25.1 The `if` statement",
+                "explanation": "Runs a block of code only if a condition is true.",
+                "use_case": "Checking if a user is logged in.",
+                "example": "if (isLoggedIn) {\n  console.log('Welcome back!');\n}"
+              },
+              {
+                "topic": "25.2 `else if` and `else`",
+                "explanation": "Chain multiple conditions. `else if` adds a new condition. `else` catches everything else.",
+                "use_case": "Grading system.",
+                "example": "if (score >= 90) {\n  grade = 'A';\n} else if (score >= 80) {\n  grade = 'B';\n} else {\n  grade = 'F';\n}"
+              },
+              {
+                "topic": "25.3 The Ternary Operator (`condition ? valueIfTrue : valueIfFalse`)",
+                "explanation": "A shorthand for `if...else` that returns a value. It is an expression, not a statement.",
+                "use_case": "Conditionally assigning a variable.",
+                "example": "let age = 20;\nlet status = age >= 18 ? 'Adult' : 'Minor';"
+              },
+              {
+                "topic": "25.4 The `switch` statement",
+                "explanation": "Useful for many comparisons against the same variable. It breaks out of the block with `break`. Default handles 'none of the above'.",
+                "use_case": "Handling different user actions (e.g., 'add', 'delete', 'edit').",
+                "example": "switch(action) {\n  case 'add':\n    addItem();\n    break;\n  case 'delete':\n    deleteItem();\n    break;\n  default:\n    console.log('Unknown action');\n}"
+              },
+              {
+                "topic": "25.5 Truthy and Falsy values",
+                "explanation": "In conditions, non-boolean values are coerced to true/false. Falsy values: `false`, `0`, `''` (empty string), `null`, `undefined`, `NaN`. Everything else is truthy.",
+                "use_case": "Checking if a variable exists.",
+                "example": "let name = '';\nif (name) { // won't run because '' is falsy\n  console.log(name);\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 26,
+            "chapter_title": "Loops & Iteration (Automating Repetition)",
+            "topics": [
+              {
+                "topic": "26.1 The `for` loop",
+                "explanation": "The classic counter loop: `for (initialization; condition; increment) { ... }`. Runs until the condition is false.",
+                "use_case": "Looping through an array.",
+                "example": "for (let i = 0; i < 10; i++) {\n  console.log(i); // prints 0 to 9\n}"
+              },
+              {
+                "topic": "26.2 The `while` loop",
+                "explanation": "Runs while the condition is true. Useful when you don't know the number of iterations.",
+                "use_case": "Reading user input until they type 'exit'.",
+                "example": "let keepGoing = true;\nwhile (keepGoing) {\n  let input = prompt('Enter command');\n  if (input === 'exit') keepGoing = false;\n}"
+              },
+              {
+                "topic": "26.3 The `do...while` loop",
+                "explanation": "Runs the code block at least once, then checks the condition.",
+                "use_case": "Asking a question at least once.",
+                "example": "do {\n  let answer = prompt('Are you sure?');\n} while (answer !== 'yes');"
+              },
+              {
+                "topic": "26.4 `break` and `continue`",
+                "explanation": "`break` exits the loop entirely. `continue` skips the rest of the current iteration and goes to the next one.",
+                "use_case": "Finding the first prime number.",
+                "example": "for (let i = 1; i <= 10; i++) {\n  if (i === 5) break; // stops at 5\n}"
+              },
+              {
+                "topic": "26.5 `for...of` (iterating over arrays)",
+                "explanation": "A cleaner way to loop over iterables (arrays, strings, NodeLists). Gives you the value directly.",
+                "use_case": "Processing each element in a list.",
+                "example": "let fruits = ['apple', 'banana'];\nfor (let fruit of fruits) {\n  console.log(fruit);\n}"
+              },
+              {
+                "topic": "26.6 `for...in` (iterating over object properties)",
+                "explanation": "Loops over enumerable property names of an object. Use with caution; use `hasOwnProperty` to avoid prototype chain issues.",
+                "use_case": "Inspecting an object's keys.",
+                "example": "let user = { name: 'John', age: 30 };\nfor (let key in user) {\n  console.log(key, user[key]);\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 27,
+            "chapter_title": "Functions - The Reusable Building Blocks",
+            "topics": [
+              {
+                "topic": "27.1 Function Declarations (`function doSomething() {}`)",
+                "explanation": "Defines a named function. It is hoisted (can be called before it's defined).",
+                "use_case": "Defining helper utilities.",
+                "example": "function greet(name) {\n  return 'Hello ' + name;\n}"
+              },
+              {
+                "topic": "27.2 Function Expressions (`const doSomething = function() {}`)",
+                "explanation": "Assigns an anonymous function to a variable. Not hoisted.",
+                "example": "const greet = function(name) {\n  return 'Hello ' + name;\n};"
+              },
+              {
+                "topic": "27.3 Arrow Functions (`const doSomething = () => {}`)",
+                "explanation": "Shorter syntax. Lexical `this` binding (doesn't have its own `this`). Useful for callbacks.",
+                "use_case": "Array methods like `map` or `filter`.",
+                "example": "const add = (a, b) => a + b;\n// If single parameter, parentheses optional: x => x * 2;"
+              },
+              {
+                "topic": "27.4 Parameters and Arguments",
+                "explanation": "Parameters are placeholders (a, b). Arguments are the actual values passed (2, 3).",
+                "example": "function multiply(a, b) { return a * b; }\nmultiply(2, 3); // 2 and 3 are arguments"
+              },
+              {
+                "topic": "27.5 Default Parameters (`function greet(name = 'Guest')`)",
+                "explanation": "Sets a default value if the argument is not provided.",
+                "use_case": "Preventing `undefined` in your function.",
+                "example": "function greet(name = 'Guest') {\n  return `Hello ${name}`;\n}\ngreet(); // Hello Guest"
+              },
+              {
+                "topic": "27.6 The `return` statement",
+                "explanation": "Returns a value from the function. Stops execution. If no `return`, the function returns `undefined`.",
+                "use_case": "Calculating and returning a result.",
+                "example": "function square(x) { return x * x; }"
+              },
+              {
+                "topic": "27.7 Scope (Global vs Function vs Block)",
+                "explanation": "Variables declared with `let`/`const` are block-scoped (visible only within `{}`). Variables declared with `var` are function-scoped. Global variables are accessible everywhere (avoid them).",
+                "use_case": "Encapsulating variables to avoid conflicts.",
+                "example": "if (true) {\n  let x = 5; // x is only accessible here\n}\n// x is not accessible here"
+              },
+              {
+                "topic": "27.8 Hoisting",
+                "explanation": "Function declarations and `var` declarations are moved to the top of their scope during compilation. `let` and `const` are hoisted but not initialized (Temporal Dead Zone).",
+                "use_case": "You can call a function declaration before it's defined.",
+                "example": "sayHello(); // Works because of hoisting\nfunction sayHello() { console.log('Hi'); }"
+              },
+              {
+                "topic": "27.9 Closures (A function remembering its outer variables)",
+                "explanation": "A closure is a function that 'remembers' its lexical scope even when the function is executed outside that scope. This is a core JS concept.",
+                "use_case": "Creating private variables (factory functions).",
+                "example": "function createCounter() {\n  let count = 0;\n  return function() {\n    count++;\n    return count;\n  };\n}\nconst counter = createCounter();\ncounter(); // 1\ncounter(); // 2\n// The `count` variable is 'closed over' and persists."
+              }
+            ]
+          },
+          {
+            "chapter_number": 28,
+            "chapter_title": "Arrays (The Master List)",
+            "topics": [
+              {
+                "topic": "28.1 Creating Arrays",
+                "explanation": "Arrays are ordered lists. `const arr = [1, 2, 3];` or `new Array(3)`.",
+                "use_case": "Storing a list of user IDs.",
+                "example": "let products = ['Laptop', 'Mouse', 'Keyboard'];"
+              },
+              {
+                "topic": "28.2 Accessing elements by index",
+                "explanation": "Zero-based indexing. `arr[0]` gives the first element.",
+                "example": "products[1] // 'Mouse'"
+              },
+              {
+                "topic": "28.3 The `length` property",
+                "explanation": "Returns the number of elements. Useful for loops.",
+                "example": "products.length // 3"
+              },
+              {
+                "topic": "28.4 Adding/Removing: `push()`, `pop()`, `unshift()`, `shift()`",
+                "explanation": "`push` adds to end. `pop` removes from end. `unshift` adds to start. `shift` removes from start. `push/pop` are fast; `shift/unshift` are slow as they reindex.",
+                "use_case": "Managing a queue or stack.",
+                "example": "products.push('Monitor'); // adds to end\nproducts.pop(); // removes 'Monitor'"
+              },
+              {
+                "topic": "28.5 Merging: `concat()` and Spread Operator (`...`)",
+                "explanation": "`concat` combines arrays. Spread (`...`) is more modern and flexible.",
+                "use_case": "Combining two lists.",
+                "example": "const arr1 = [1, 2];\nconst arr2 = [3, 4];\nconst combined = [...arr1, ...arr2]; // [1,2,3,4]"
+              },
+              {
+                "topic": "28.6 Finding elements: `indexOf()`, `includes()`, `find()`, `findIndex()`",
+                "explanation": "`indexOf` returns the index or -1. `includes` returns boolean. `find` returns the first element that passes a test. `findIndex` returns the index.",
+                "use_case": "Checking if a product is in the cart.",
+                "example": "let numbers = [5, 12, 8, 130];\nlet found = numbers.find(num => num > 10); // 12"
+              },
+              {
+                "topic": "28.7 Slicing and Splicing: `slice()` vs `splice()`",
+                "explanation": "`slice(start, end)` returns a new array (doesn't modify original). `splice(start, deleteCount, ...items)` modifies the original (removes/inserts).",
+                "use_case": "Removing an item from the middle.",
+                "example": "arr.splice(2, 1); // removes 1 element at index 2\narr.slice(1, 3); // returns new array with elements 1 and 2"
+              },
+              {
+                "topic": "28.8 Powerful Array Methods: `forEach`, `map`, `filter`, `reduce`, `some`, `every`, `sort`",
+                "explanation": "These are the jewels of functional programming in JS. `forEach` loops, `map` transforms, `filter` selects, `reduce` aggregates.",
+                "use_case": "Transforming data for display.",
+                "example": "let prices = [10, 20, 30];\nlet doubled = prices.map(p => p * 2); // [20, 40, 60]\nlet high = prices.filter(p => p > 15); // [20, 30]\nlet total = prices.reduce((sum, p) => sum + p, 0); // 60\n\n// Sort (must handle numbers)\nlet sorted = prices.sort((a, b) => a - b);"
+              },
+              {
+                "topic": "28.9 `reverse()`",
+                "explanation": "Reverses the array in place.",
+                "example": "[1, 2, 3].reverse() // [3, 2, 1]"
+              }
+            ]
+          },
+          {
+            "chapter_number": 29,
+            "chapter_title": "Objects (Storing Real-World Things)",
+            "topics": [
+              {
+                "topic": "29.1 Creating Objects",
+                "explanation": "Objects are collections of key-value pairs. `const person = { name: 'John', age: 30 };`",
+                "use_case": "Storing a user profile.",
+                "example": "let car = {\n  brand: 'Toyota',\n  model: 'Corolla',\n  year: 2020\n};"
+              },
+              {
+                "topic": "29.2 Accessing properties: Dot vs Bracket",
+                "explanation": "Dot notation (`person.name`) is preferred for known keys. Bracket notation (`person['name']`) is needed for dynamic keys or keys with special characters.",
+                "example": "car.brand // 'Toyota'\ncar['model'] // 'Corolla'\nconst key = 'year';\ncar[key] // 2020"
+              },
+              {
+                "topic": "29.3 Adding/Modifying/Deleting properties",
+                "explanation": "You can add a new property by assigning it (`car.color = 'red'`). Delete with `delete car.color`.",
+                "use_case": "Updating user details.",
+                "example": "person.age = 31;\nperson.city = 'Nairobi';\ndelete person.oldProperty;"
+              },
+              {
+                "topic": "29.4 Object Methods (storing functions)",
+                "explanation": "You can store functions as property values.",
+                "use_case": "Creating an object with behavior.",
+                "example": "let calculator = {\n  add: function(a, b) { return a + b; },\n  subtract(a, b) { return a - b; } // Shorthand\n};\ncalculator.add(5, 3) // 8"
+              },
+              {
+                "topic": "29.5 The `this` keyword in objects",
+                "explanation": "`this` refers to the current object when used inside a method.",
+                "use_case": "Accessing other properties of the same object.",
+                "example": "let user = {\n  name: 'Alice',\n  greet() {\n    return 'Hello ' + this.name;\n  }\n};\nuser.greet(); // Hello Alice"
+              },
+              {
+                "topic": "29.6 Looping through objects (`for...in`)",
+                "explanation": "Iterates over enumerable properties.",
+                "example": "for (let key in person) {\n  console.log(key, person[key]);\n}"
+              },
+              {
+                "topic": "29.7 Object Destructuring",
+                "explanation": "Extracts properties into variables.",
+                "use_case": "Extracting parameters from an object passed to a function.",
+                "example": "const { name, age } = person;\nconsole.log(name); // John\n\nfunction greet({ name, age }) {\n  console.log(`Hello ${name}, you are ${age}`);\n}"
+              },
+              {
+                "topic": "29.8 The Spread operator on Objects",
+                "explanation": "Copies properties from one object to another. Great for immutability.",
+                "example": "let updatedPerson = { ...person, city: 'Nairobi' }; // copies person and adds city"
+              },
+              {
+                "topic": "29.9 Nested Objects and Arrays",
+                "explanation": "Objects can contain arrays, and arrays can contain objects.",
+                "use_case": "Complex state management.",
+                "example": "let company = {\n  name: 'TechCorp',\n  employees: [\n    { name: 'John', role: 'Dev' },\n    { name: 'Jane', role: 'Designer' }\n  ]\n};\ncompany.employees[0].name // John"
+              },
+              {
+                "topic": "29.10 Shallow Copy vs Deep Copy",
+                "explanation": "`...` creates a shallow copy (only top level). Nested objects are still referenced. For deep copy, use `structuredClone(object)` or `JSON.parse(JSON.stringify(object))`.",
+                "use_case": "Cloning complex state.",
+                "example": "const deepCopy = structuredClone(company); // Full independent copy"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 6,
+        "part_title": "THE CONNECTION (DOM Manipulation & Events)",
+        "description": "This is where JavaScript reaches out of its bubble and grabs the HTML and CSS to change the page live. You learn how to select, traverse, and mutate the DOM.",
+        "chapters": [
+          {
+            "chapter_number": 30,
+            "chapter_title": "Selecting HTML Elements from JavaScript",
+            "topics": [
+              {
+                "topic": "30.1 `document.getElementById()`",
+                "explanation": "Selects an element by its `id` attribute. Returns a single element (or `null`). It's fast, but IDs must be unique.",
+                "use_case": "Targeting a specific, unique element like the main logo.",
+                "example": "const logo = document.getElementById('site-logo');"
+              },
+              {
+                "topic": "30.2 `document.getElementsByClassName()`",
+                "explanation": "Selects elements by class name. Returns an HTMLCollection (live, updates automatically).",
+                "use_case": "Selecting all items with a specific class.",
+                "example": "const cards = document.getElementsByClassName('card');"
+              },
+              {
+                "topic": "30.3 `document.getElementsByTagName()`",
+                "explanation": "Selects elements by tag name. Returns an HTMLCollection.",
+                "use_case": "Selecting all paragraphs.",
+                "example": "const paras = document.getElementsByTagName('p');"
+              },
+              {
+                "topic": "30.4 `document.querySelector()` (The Swiss Army Knife)",
+                "explanation": "Uses CSS selectors to select the first match. This is the most versatile method. Returns single element or `null`.",
+                "use_case": "Selecting any element with complex selectors.",
+                "example": "const btn = document.querySelector('#main .btn-primary');\nconst firstCard = document.querySelector('.card');"
+              },
+              {
+                "topic": "30.5 `document.querySelectorAll()`",
+                "explanation": "Uses CSS selectors to select all matches. Returns a NodeList (static, does not update automatically). NodeLists have `forEach`.",
+                "use_case": "Selecting all cards to apply a change.",
+                "example": "const allCards = document.querySelectorAll('.card');\nallCards.forEach(card => card.style.border = '1px solid black');"
+              },
+              {
+                "topic": "30.6 NodeLists vs HTMLCollections",
+                "explanation": "NodeList is static; HTMLCollection is live. If you select with `querySelectorAll`, changes to the DOM won't update the list. `getElementsByClassName` will. Most of the time, `querySelectorAll` is preferred due to its static nature and forEach support.",
+                "example": "// Use querySelectorAll to avoid unexpected live behavior."
+              }
+            ]
+          },
+          {
+            "chapter_number": 31,
+            "chapter_title": "Traversing the DOM (Moving between elements)",
+            "topics": [
+              {
+                "topic": "31.1 Parent nodes: `.parentNode`, `.parentElement`, `.closest()`",
+                "explanation": "`.parentNode` and `.parentElement` are similar (parentElement excludes document fragments). `.closest(selector)` finds the nearest ancestor matching a selector.",
+                "use_case": "Finding a parent container of a clicked button.",
+                "example": "const card = button.closest('.card');"
+              },
+              {
+                "topic": "31.2 Children nodes: `.children`, `.childNodes`, `.firstElementChild`, `.lastElementChild`",
+                "explanation": "`.children` returns HTMLCollection of element children. `.childNodes` includes text nodes and comments. `.firstElementChild` / `.lastElementChild` get the first/last element child.",
+                "use_case": "Looping through children of a list.",
+                "example": "const listItems = ul.children;"
+              },
+              {
+                "topic": "31.3 Siblings: `.nextElementSibling`, `.previousElementSibling`",
+                "explanation": "Gets the next/previous element sibling.",
+                "use_case": "Highlighting the next input field.",
+                "example": "const next = currentInput.nextElementSibling;"
+              }
+            ]
+          },
+          {
+            "chapter_number": 32,
+            "chapter_title": "Manipulating the DOM (Changing the Page Live)",
+            "topics": [
+              {
+                "topic": "32.1 Changing content: `.textContent` vs `.innerHTML` vs `.innerText`",
+                "explanation": "`.textContent` sets plain text (safe, no XSS). `.innerHTML` sets HTML string (renders tags, but security risk if user-generated). `.innerText` is similar to textContent but respects CSS styling (slower).",
+                "use_case": "Updating a user's name safely.",
+                "example": "document.getElementById('name').textContent = 'John';\n// Using innerHTML to add a list\nlist.innerHTML = '<li>Item 1</li><li>Item 2</li>';"
+              },
+              {
+                "topic": "32.2 Changing attributes: `.setAttribute()`, `.getAttribute()`, `.removeAttribute()`",
+                "explanation": "Manipulates any attribute on an element.",
+                "use_case": "Changing an image source or disabling a button.",
+                "example": "img.setAttribute('src', 'new-image.jpg');\nconst href = link.getAttribute('href');"
+              },
+              {
+                "topic": "32.3 Changing CSS classes: `.classList.add()`, `.remove()`, `.toggle()`, `.contains()`",
+                "explanation": "The `classList` API is the standard way to manipulate classes. It's much cleaner than string manipulation.",
+                "use_case": "Toggling a dark mode class on the body.",
+                "example": "document.body.classList.toggle('dark-mode');\nbutton.classList.add('active');"
+              },
+              {
+                "topic": "32.4 Changing inline styles directly: `.style.backgroundColor = 'red'`",
+                "explanation": "Allows you to set CSS directly. Use camelCase for multi-word properties (`background-color` becomes `backgroundColor`). This adds inline styles, which have high priority.",
+                "use_case": "Setting a dynamic position based on mouse coordinates.",
+                "example": "element.style.width = '200px';\nelement.style.transform = 'rotate(45deg)';"
+              },
+              {
+                "topic": "32.5 Creating new elements: `document.createElement()`",
+                "explanation": "Creates a new element in memory, not yet on the page.",
+                "use_case": "Generating a new product card from a list of data.",
+                "example": "const newDiv = document.createElement('div');\nnewDiv.className = 'item';"
+              },
+              {
+                "topic": "32.6 Appending: `.appendChild()`, `.append()`, `.prepend()`",
+                "explanation": "`appendChild` appends a node. `append` is more flexible (accepts strings and multiple nodes). `prepend` inserts at the beginning.",
+                "use_case": "Adding a new item to a list.",
+                "example": "const li = document.createElement('li');\nli.textContent = 'New Item';\ndocument.getElementById('list').appendChild(li);"
+              },
+              {
+                "topic": "32.7 Inserting before: `.insertBefore()` and `.insertAdjacentElement()`",
+                "explanation": "`insertAdjacentElement(position, element)` is more versatile with positions like `'beforebegin'`, `'afterbegin'`, `'beforeend'`, `'afterend'`.",
+                "use_case": "Inserting an element before another.",
+                "example": "parent.insertBefore(newElement, referenceElement);\nrefElement.insertAdjacentElement('beforebegin', newElement);"
+              },
+              {
+                "topic": "32.8 Inserting raw HTML easily: `.insertAdjacentHTML()`",
+                "explanation": "Parses and inserts HTML string at a specific position. Faster than setting innerHTML because it doesn't reparse the entire element.",
+                "use_case": "Dynamically building a large chunk of UI.",
+                "example": "container.insertAdjacentHTML('beforeend', '<div class=\"card\">...</div>');"
+              },
+              {
+                "topic": "32.9 Removing elements: `.removeChild()` and `.remove()`",
+                "explanation": "`remove()` is the modern way; it removes the element directly. `removeChild` requires the parent.",
+                "use_case": "Deleting a to-do item.",
+                "example": "element.remove(); // simplest"
+              },
+              {
+                "topic": "32.10 Cloning nodes: `.cloneNode()`",
+                "explanation": "Creates a copy. `cloneNode(true)` does a deep clone (includes children).",
+                "use_case": "Duplicating a template card.",
+                "example": "const clone = originalCard.cloneNode(true);\ncontainer.appendChild(clone);"
+              }
+            ]
+          },
+          {
+            "chapter_number": 33,
+            "chapter_title": "Events - Listening to the User",
+            "topics": [
+              {
+                "topic": "33.1 `addEventListener()` and `removeEventListener()`",
+                "explanation": "The standard way to attach event handlers. `addEventListener('click', handler)`. You can remove it with `removeEventListener` (must pass the same function reference).",
+                "use_case": "Handling all user interactions.",
+                "example": "button.addEventListener('click', function() {\n  alert('Clicked!');\n});"
+              },
+              {
+                "topic": "33.2 The Event Object (`e`)",
+                "explanation": "The event object is passed to the handler. It contains properties about the event: `e.target` (the element that triggered it), `e.type`, `e.key`, `e.clientX/Y`, etc.",
+                "use_case": "Getting the clicked element.",
+                "example": "document.addEventListener('click', function(e) {\n  console.log('Clicked on:', e.target);\n});"
+              },
+              {
+                "topic": "33.3 Mouse Events: `click`, `dblclick`, `mouseenter`, `mouseleave`, `mousemove`, `contextmenu`",
+                "explanation": "`mouseenter` and `mouseleave` do not bubble (unlike `mouseover`/`mouseout`). `contextmenu` is the right-click.",
+                "use_case": "Hover effects, drag-and-drop, custom context menus.",
+                "example": "element.addEventListener('mouseenter', () => { element.style.background = 'yellow'; });\nelement.addEventListener('contextmenu', (e) => { e.preventDefault(); alert('Right click!'); });"
+              },
+              {
+                "topic": "33.4 Keyboard Events: `keydown`, `keyup`, `keypress`",
+                "explanation": "`keydown` fires when a key is pressed. `keyup` when released. `keypress` is deprecated. Use `e.key` to get the character (e.g., 'Enter') and `e.code` for the physical key (e.g., 'KeyA').",
+                "use_case": "Search on pressing 'Enter'.",
+                "example": "input.addEventListener('keydown', (e) => {\n  if (e.key === 'Enter') {\n    performSearch();\n  }\n});"
+              },
+              {
+                "topic": "33.5 Form Events: `submit`, `change`, `input`, `focus`, `blur`",
+                "explanation": "`submit` fires on the `<form>` element. `change` fires when the value is committed (blur or changed). `input` fires on every keystroke. `focus`/`blur` on entering/leaving.",
+                "use_case": "Live search suggestions (input), form validation on submit.",
+                "example": "form.addEventListener('submit', (e) => {\n  e.preventDefault(); // prevent page reload\n  // handle submission\n});\ninput.addEventListener('input', () => {\n  console.log(input.value);\n});"
+              },
+              {
+                "topic": "33.6 Window/Document Events: `load`, `DOMContentLoaded`, `scroll`, `resize`",
+                "explanation": "`DOMContentLoaded` fires when the HTML is parsed (good for running JS). `load` fires when all assets (images, CSS) are loaded. `scroll` and `resize` are useful for dynamic positioning.",
+                "use_case": "Running code after the page is ready.",
+                "example": "document.addEventListener('DOMContentLoaded', () => {\n  console.log('DOM is ready!');\n});\nwindow.addEventListener('scroll', () => {\n  console.log(window.scrollY);\n});"
+              },
+              {
+                "topic": "33.7 Clipboard Events: `cut`, `copy`, `paste`",
+                "explanation": "Triggers when the user cuts, copies, or pastes. You can modify the clipboard data.",
+                "use_case": "Copying a formatted text or blocking paste on sensitive fields.",
+                "example": "input.addEventListener('paste', (e) => {\n  e.clipboardData.getData('text/plain'); // read pasted text\n});"
+              },
+              {
+                "topic": "33.8 `preventDefault()`",
+                "explanation": "Prevents the default browser behavior (e.g., form submission, link navigation, context menu).",
+                "use_case": "Preventing a form from reloading the page.",
+                "example": "link.addEventListener('click', (e) => e.preventDefault());"
+              },
+              {
+                "topic": "33.9 `stopPropagation()`",
+                "explanation": "Prevents the event from bubbling up to parent elements.",
+                "use_case": "When you have a click on a button inside a card, you don't want the card's click to fire.",
+                "example": "button.addEventListener('click', (e) => {\n  e.stopPropagation();\n  // only button handler runs\n});"
+              },
+              {
+                "topic": "33.10 Event Bubbling vs Capturing",
+                "explanation": "Bubbling goes from the deepest target up to the root. Capturing goes from root down to target. `addEventListener` defaults to bubbling (use `{ capture: true }` for capturing).",
+                "use_case": "Understanding this is crucial for complex nested components.",
+                "example": "document.body.addEventListener('click', () => console.log('Body clicked'), true); // Capture phase"
+              },
+              {
+                "topic": "33.11 Event Delegation",
+                "explanation": "Attaching a single event listener to a parent to handle events on its children (using `e.target`). This is memory efficient and works for dynamically added elements.",
+                "use_case": "A list where items can be added dynamically, you want clicks on any item.",
+                "example": "document.getElementById('list').addEventListener('click', (e) => {\n  if (e.target.matches('li')) {\n    console.log('List item clicked:', e.target.textContent);\n  }\n});"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 7,
+        "part_title": "THE STORAGE & ADVANCED JS (Data Persistence & Async)",
+        "description": "We move from simple interactions to permanent data storage, timing, error handling, and asynchronous programming (the true mark of a professional).",
+        "chapters": [
+          {
+            "chapter_number": 34,
+            "chapter_title": "Browser Storage (Saving Data Forever)",
+            "topics": [
+              {
+                "topic": "34.1 `localStorage` (survives browser restarts)",
+                "explanation": "Stores key-value pairs persistently. Data remains even after the browser is closed and reopened. Limit is ~10MB. It is synchronous.",
+                "use_case": "Saving user preferences (theme, language) or keeping a user logged in without a backend.",
+                "example": "localStorage.setItem('theme', 'dark');\nconst theme = localStorage.getItem('theme'); // 'dark'\nlocalStorage.removeItem('theme');\nlocalStorage.clear();"
+              },
+              {
+                "topic": "34.2 `sessionStorage` (survives only while tab is open)",
+                "explanation": "Same API as localStorage, but cleared when the tab or browser is closed. Useful for temporary data during a session.",
+                "use_case": "Storing a shopping cart for a guest user.",
+                "example": "sessionStorage.setItem('cart', JSON.stringify(cartItems));"
+              },
+              {
+                "topic": "34.3 Storing complex data: `JSON.stringify()` and `JSON.parse()`",
+                "explanation": "Storage only stores strings. To store arrays or objects, convert them to JSON strings with `stringify`. Retrieve and parse back.",
+                "use_case": "Saving a user object.",
+                "example": "const user = { name: 'John', age: 30 };\nlocalStorage.setItem('user', JSON.stringify(user));\nconst retrieved = JSON.parse(localStorage.getItem('user'));"
+              }
+            ]
+          },
+          {
+            "chapter_number": 35,
+            "chapter_title": "Timing Functions (Scheduling Actions)",
+            "topics": [
+              {
+                "topic": "35.1 `setTimeout()` (run after X milliseconds)",
+                "explanation": "Executes a function once after a specified delay.",
+                "use_case": "Showing a notification that disappears after 3 seconds.",
+                "example": "setTimeout(() => {\n  alert('Time is up!');\n}, 3000);"
+              },
+              {
+                "topic": "35.2 `setInterval()` (run every X milliseconds)",
+                "explanation": "Executes a function repeatedly at specified intervals.",
+                "use_case": "Building a live clock, or a auto-refresh of data.",
+                "example": "setInterval(() => {\n  console.log(new Date().toLocaleTimeString());\n}, 1000);"
+              },
+              {
+                "topic": "35.3 `clearTimeout()` and `clearInterval()`",
+                "explanation": "Stops the timer. Save the ID returned by `setTimeout` or `setInterval`.",
+                "use_case": "Stopping an animation loop when a user navigates away.",
+                "example": "const timerId = setTimeout(() => {}, 1000);\nclearTimeout(timerId);"
+              }
+            ]
+          },
+          {
+            "chapter_number": 36,
+            "chapter_title": "Error Handling (Defensive Programming)",
+            "topics": [
+              {
+                "topic": "36.1 The `try...catch` block",
+                "explanation": "Wraps code that might throw an error. If an error occurs, it jumps to the `catch` block, preventing the entire script from crashing.",
+                "use_case": "Parsing JSON that might be malformed, or calling an API.",
+                "example": "try {\n  const data = JSON.parse(invalidString);\n} catch (error) {\n  console.error('Failed to parse JSON:', error.message);\n}"
+              },
+              {
+                "topic": "36.2 The `finally` block",
+                "explanation": "Runs after `try` or `catch`, regardless of whether an error occurred. Used for cleanup.",
+                "use_case": "Hiding a loading spinner.",
+                "example": "try {\n  // fetch data\n} catch (err) {\n  // handle error\n} finally {\n  loadingSpinner.hide(); // always runs\n}"
+              },
+              {
+                "topic": "36.3 Throwing custom errors: `throw new Error('Custom message')`",
+                "explanation": "You can create your own errors to signal invalid states.",
+                "use_case": "Input validation.",
+                "example": "if (age < 18) {\n  throw new Error('You must be 18 or older');\n}"
+              },
+              {
+                "topic": "36.4 Using `console.warn()` and `console.error()`",
+                "explanation": "Warnings and errors are different log levels. They are clearly distinguishable in the console, helping with debugging.",
+                "use_case": "Notifying developers about deprecations.",
+                "example": "console.warn('This feature will be removed soon.');\nconsole.error('Critical failure in module X');"
+              }
+            ]
+          },
+          {
+            "chapter_number": 37,
+            "chapter_title": "Async JavaScript - The Non-Blocking Web (True Expert Level)",
+            "topics": [
+              {
+                "topic": "37.1 Synchronous vs Asynchronous code explained (The Event Loop)",
+                "explanation": "JS is single-threaded. Synchronous code runs line by line and blocks the thread. Asynchronous code (like `setTimeout`, `fetch`) is handed off to Web APIs. The Event Loop moves callbacks from the task queue to the call stack when it's empty. This is why long loops freeze the page, but network requests do not.",
+                "use_case": "Understanding why a 5-second loop makes the page unresponsive, but a 5-second network request doesn't.",
+                "example": "console.log('Start');\nsetTimeout(() => console.log('Timeout'), 0);\nconsole.log('End'); // Prints Start, End, Timeout (due to event loop)"
+              },
+              {
+                "topic": "37.2 Callback Hell",
+                "explanation": "Nesting callbacks inside callbacks creates a pyramid of doom. It's hard to read, hard to handle errors, and leads to spaghetti code.",
+                "use_case": "The old way of chaining async operations.",
+                "example": "getUser(function(user) {\n  getPosts(user.id, function(posts) {\n    getComments(posts[0].id, function(comments) {\n      // nested hell\n    });\n  });\n});"
+              },
+              {
+                "topic": "37.3 Promises: `.then()`, `.catch()`, `.finally()`",
+                "explanation": "A Promise represents a future value. It has states: pending, fulfilled, or rejected. You chain `.then` for success, `.catch` for errors, `.finally` for cleanup.",
+                "use_case": "The modern standard for async operations.",
+                "example": "fetch('/api/user')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error))\n  .finally(() => console.log('Request completed'));"
+              },
+              {
+                "topic": "37.4 `async` and `await`",
+                "explanation": "Syntactic sugar over Promises. `async` functions return a Promise. `await` pauses the execution of the function until the Promise resolves. This makes async code look synchronous and drastically improves readability.",
+                "use_case": "Writing clean, sequential asynchronous logic.",
+                "example": "async function fetchUserData() {\n  try {\n    const response = await fetch('/api/user');\n    const user = await response.json();\n    console.log(user);\n  } catch (error) {\n    console.error(error);\n  }\n}"
+              },
+              {
+                "topic": "37.5 The `fetch()` API (grabbing data from the internet)",
+                "explanation": "The modern way to make network requests. Returns a Promise. It resolves to a Response object. You must call `.json()` or `.text()` to get the data.",
+                "use_case": "Retrieving data from a REST API.",
+                "example": "fetch('https://api.example.com/products')\n  .then(res => res.json())\n  .then(products => displayProducts(products));"
+              },
+              {
+                "topic": "37.6 Working with APIs: `fetch(url).then(res => res.json())`",
+                "explanation": "The response object has status codes (`res.status`). Always check `res.ok` before parsing, as a 404 will still resolve the promise.",
+                "use_case": "Robust API calls.",
+                "example": "const response = await fetch(url);\nif (!response.ok) {\n  throw new Error(`HTTP error! status: ${response.status}`);\n}\nconst data = await response.json();"
+              },
+              {
+                "topic": "37.7 Sending Data with Fetch: `POST` requests",
+                "explanation": "To send data, you need a `POST` method, headers (`Content-Type: application/json`), and a body (stringified JSON).",
+                "use_case": "Submitting a form or creating a new resource.",
+                "example": "const newUser = { name: 'John' };\nconst response = await fetch('/api/users', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify(newUser)\n});"
+              },
+              {
+                "topic": "37.8 Handling API errors gracefully",
+                "explanation": "Network failures (offline) will reject the promise. Server errors (500) do not reject; you must check `res.ok`. Always show user-friendly messages.",
+                "use_case": "A robust UI that doesn't crash.",
+                "example": "async function loadData() {\n  try {\n    const res = await fetch('/api/data');\n    if (!res.ok) throw new Error('Failed to load data');\n    const data = await res.json();\n    render(data);\n  } catch (err) {\n    document.getElementById('error').textContent = 'Could not load data. Please try again.';\n  }\n}"
+              }
+            ]
+          },
+          {
+            "chapter_number": 38,
+            "chapter_title": "Object-Oriented Programming (OOP) in JS",
+            "topics": [
+              {
+                "topic": "38.1 Constructor Functions",
+                "explanation": "Old way of creating multiple objects with the same structure. Uses `function` and `new`. Not commonly used today, but good to know.",
+                "use_case": "Creating many user objects.",
+                "example": "function User(name, age) {\n  this.name = name;\n  this.age = age;\n}\nconst user1 = new User('John', 30);"
+              },
+              {
+                "topic": "38.2 The `new` keyword",
+                "explanation": "Creates a new empty object, sets `this` to it, and returns it.",
+                "example": "const user = new User('Jane', 25);"
+              },
+              {
+                "topic": "38.3 ES6 Classes: `class User { constructor() {} }`",
+                "explanation": "Modern syntactic sugar over constructor functions. Cleaner and more familiar to developers from other OOP languages.",
+                "use_case": "Defining blueprints for data models.",
+                "example": "class User {\n  constructor(name, age) {\n    this.name = name;\n    this.age = age;\n  }\n  greet() {\n    return `Hello, I'm ${this.name}`;\n  }\n}\nconst user = new User('Alice', 28);"
+              },
+              {
+                "topic": "38.4 Class Methods and Properties",
+                "explanation": "Methods are defined within the class body. Properties are set in the constructor. Static methods (called on the class itself) are defined with `static`.",
+                "example": "class MathUtils {\n  static add(a, b) { return a + b; }\n}\nMathUtils.add(2, 3); // 5"
+              },
+              {
+                "topic": "38.5 Getters and Setters",
+                "explanation": "Special methods that act like properties. `get` retrieves a computed value, `set` assigns a value with validation.",
+                "use_case": "Validating data before assignment.",
+                "example": "class Person {\n  constructor(name) {\n    this._name = name;\n  }\n  get name() {\n    return this._name.toUpperCase();\n  }\n  set name(value) {\n    if (value.length < 2) throw new Error('Name too short');\n    this._name = value;\n  }\n}"
+              },
+              {
+                "topic": "38.6 Inheritance: `extends` and `super()`",
+                "explanation": "`extends` creates a child class. `super()` calls the parent constructor. This allows you to build upon existing classes.",
+                "use_case": "Extending a `User` class to `Admin` with extra permissions.",
+                "example": "class Admin extends User {\n  constructor(name, age, permissions) {\n    super(name, age);\n    this.permissions = permissions;\n  }\n  adminOnly() {\n    console.log('Admin action');\n  }\n}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": 8,
+        "part_title": "THE POLISH & REAL-WORLD DEPLOYMENT",
+        "description": "You are now an expert. But experts ensure their code is fast, accessible, optimized, and deployed to the public internet. This is the final lap.",
+        "chapters": [
+          {
+            "chapter_number": 39,
+            "chapter_title": "Performance & Optimization",
+            "topics": [
+              {
+                "topic": "39.1 Minifying CSS, JS, and HTML",
+                "explanation": "Minification removes whitespace, comments, and renames variables to shorten names. This drastically reduces file size, speeding up load times. Build tools like Vite, Webpack, or online minifiers handle this.",
+                "use_case": "Preparing your site for production.",
+                "example": "Before: `function add(a, b) { return a + b; }`\nAfter: `function add(a,b){return a+b}` (minified)."
+              },
+              {
+                "topic": "39.2 Optimizing Images: Lazy loading (`loading='lazy'`)",
+                "explanation": "Images below the fold should not load until the user scrolls to them. Add `loading='lazy'` to your `<img>` and `<iframe>` tags to defer loading. This dramatically improves initial load time.",
+                "use_case": "A blog with many high-res images.",
+                "example": "<img src='heavy-image.jpg' alt='...' loading='lazy'>"
+              },
+              {
+                "topic": "39.3 Using the Browser DevTools: The Network Tab",
+                "explanation": "The Network tab shows every request your page makes, the size of each file, and the load time. It helps you identify bottlenecks (large images, slow fonts, unminified files).",
+                "use_case": "Auditing your page's performance.",
+                "example": "Open DevTools > Network. Reload the page. Look for large files. Check the 'Waterfall' to see what's blocking the render."
+              },
+              {
+                "topic": "39.4 The Performance Tab (recording and finding lag)",
+                "explanation": "The Performance tab records a timeline of your page's activity. It shows FPS (frames per second). If FPS drops, you have a 'jank' (slow JavaScript or layout thrashing).",
+                "use_case": "Finding the cause of scrolling lag.",
+                "example": "Start a recording, scroll the page, stop. Look for red bars in the 'Frames' section to see what code took too long."
+              },
+              {
+                "topic": "39.5 Debouncing and Throttling",
+                "explanation": "Events like `scroll`, `resize`, and `keyup` fire hundreds of times a second. Executing heavy code on each fire freezes the page. **Throttling** limits the execution to once every X milliseconds. **Debouncing** waits until the user stops firing the event for X milliseconds (e.g., search input).",
+                "use_case": "Search suggestions (debounce) or infinite scrolling (throttle).",
+                "example": "function debounce(func, delay) {\n  let timeout;\n  return function(...args) {\n    clearTimeout(timeout);\n    timeout = setTimeout(() => func.apply(this, args), delay);\n  };\n}\ninput.addEventListener('input', debounce(searchAPI, 300));"
+              }
+            ]
+          },
+          {
+            "chapter_number": 40,
+            "chapter_title": "Accessibility (a11y) - Building for Everyone",
+            "topics": [
+              {
+                "topic": "40.1 Proper Heading Structure",
+                "explanation": "Screen readers use headings to navigate. You must use sequential headings. `<h1>` -> `<h2>` -> `<h3>`. Never skip levels.",
+                "use_case": "Ensuring a blind user can outline your page.",
+                "example": "<!-- Correct -->\n<h1>Main Title</h1>\n  <h2>Subsection</h2>\n    <h3>Detail</h3>\n<!-- Incorrect -->\n<h1>Title</h1>\n  <h3>Subsection (skipping h2)" 
+              },
+              {
+                "topic": "40.2 Alt text for images",
+                "explanation": "Every `<img>` must have an `alt` attribute. For decorative images, use `alt=''` (empty). For informational images, describe the content concisely.",
+                "use_case": "Selling a product: `alt='Blue denim jacket with gold buttons'`.",
+                "example": "<img src='product.jpg' alt='Blue denim jacket with gold buttons'>\n<img src='decoration.png' alt=''>"
+              },
+              {
+                "topic": "40.3 ARIA Attributes: `aria-label`, `aria-hidden`, `role`",
+                "explanation": "ARIA (Accessible Rich Internet Applications) augments HTML semantics when HTML tags aren't enough. `aria-label` provides a label when there is no visible text. `aria-hidden='true'` hides elements from screen readers. `role` defines a widget's purpose.",
+                "use_case": "A button that only has an icon (no text).",
+                "example": "<button aria-label='Close menu'>X</button>\n<div role='alert' aria-live='polite'>Error message</div>"
+              },
+              {
+                "topic": "40.4 Keyboard Navigation: `tabindex`, focus indicators",
+                "explanation": "Users must be able to navigate with the Tab key. `tabindex='0'` makes a non-interactive element focusable. `tabindex='-1'` removes it from the tab order but still allows programmatic focus. Never remove the `:focus` outline (like `outline: none`) without replacing it with a visible custom style.",
+                "use_case": "Making a custom dropdown accessible.",
+                "example": ".custom-button:focus { outline: 2px solid blue; outline-offset: 2px; } // Always replace outline with something visible."
+              },
+              {
+                "topic": "40.5 Color Contrast Ratios (WCAG guidelines)",
+                "explanation": "WCAG 2.1 AA requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text (18pt+). Low contrast text is unreadable for users with low vision. Use browser tools to check contrast.",
+                "use_case": "Your primary text color on a background.",
+                "example": "// Use contrast checkers (e.g., WebAIM). Ensure you don't use gray on light gray."
+              }
+            ]
+          },
+          {
+            "chapter_number": 41,
+            "chapter_title": "Basic SEO (Being found on Google)",
+            "topics": [
+              {
+                "topic": "41.1 Semantic HTML",
+                "explanation": "Google crawlers use semantic tags to understand the hierarchy and importance of content. An `<h1>` carries more weight than a `<div>` containing text. `<article>` tells Google this is standalone content.",
+                "use_case": "Structuring a blog page semantically to rank for keywords.",
+                "example": "Use `<article>` for the post, `<header>` for the title, `<section>` for chapters."
+              },
+              {
+                "topic": "41.2 Meta Descriptions and Open Graph tags",
+                "explanation": "The `<meta name='description'>` is the snippet shown under your page title in search results. It should be compelling and under 160 characters. Open Graph tags (`og:title`, `og:image`, `og:description`) control how your page appears when shared on social media (Facebook, LinkedIn, X).",
+                "use_case": "Boosting click-through rates from Google and social shares.",
+                "example": "<meta name='description' content='Learn how to build web apps from scratch'>\n<meta property='og:title' content='Complete Web Development Course'>\n<meta property='og:image' content='https://example.com/cover.jpg'>"
+              },
+              {
+                "topic": "41.3 The `<title>` tag importance",
+                "explanation": "The title is the single most important SEO factor. It appears in the browser tab and as the clickable headline in search results. It must include your primary keyword and be under 60 characters.",
+                "use_case": "Your homepage title should include your brand and primary service.",
+                "example": "<title>Buy Cheap Flights Online | FlyAway Airlines</title>"
+              },
+              {
+                "topic": "41.4 Using `<h1>` correctly",
+                "explanation": "Google prioritizes the `<h1>` as the main topic. Use it once per page, near the top, and include your main keyword.",
+                "use_case": "A blog post title.",
+                "example": "<h1>Ultimate Guide to Fishing in Lake Victoria</h1>"
+              }
+            ]
+          },
+          {
+            "chapter_number": 42,
+            "chapter_title": "ES6 Modules (Organizing Big Code)",
+            "topics": [
+              {
+                "topic": "42.1 The `type='module'` in the script tag",
+                "explanation": "To use ES modules, add `type='module'` to your `<script>` tag. This enables `import`/`export` syntax and makes your code automatically strict mode. Modules are deferred by default.",
+                "use_case": "Separating code into logical files.",
+                "example": "<script type='module' src='main.js'></script>"
+              },
+              {
+                "topic": "42.2 Exporting: `export default` vs `export const`",
+                "explanation": "`export default` exports a single value (function, class, object). `export const` exports named exports. You can have one default per file, but many named exports.",
+                "use_case": "Creating a utilities file.",
+                "example": "// utils.js\nexport const add = (a, b) => a + b;\nexport const multiply = (a, b) => a * b;\nexport default function greet(name) { return `Hi ${name}`; }"
+              },
+              {
+                "topic": "42.3 Importing: `import myFunc from './file.js'`",
+                "explanation": "`import defaultExport from './file.js'` imports the default. `import { namedExport } from './file.js'` imports named exports. You can alias with `as`. Always use relative paths (`.js` extension required in browsers).",
+                "use_case": "Using the utilities in your main file.",
+                "example": "// main.js\nimport greet, { add, multiply } from './utils.js';\nconsole.log(greet('John')); // Hi John\nconsole.log(add(2, 3)); // 5"
+              }
+            ]
+          },
+          {
+            "chapter_number": 43,
+            "chapter_title": "Building & Deployment (Going Live for the World)",
+            "topics": [
+              {
+                "topic": "43.1 Understanding Hosting vs Domains",
+                "explanation": "A **Domain** is the human-readable name (e.g., `mycompany.com`). **Hosting** is the server space where your files live. You buy a domain from registrars (GoDaddy, Namecheap) and hosting from providers (Netlify, Vercel, AWS). You point the domain's DNS to the host's IP.",
+                "use_case": "Putting your portfolio online.",
+                "example": "You buy `john.dev`, host it on Netlify, and configure the DNS so `john.dev` points to your Netlify site."
+              },
+              {
+                "topic": "43.2 Using Git and GitHub (basic workflow)",
+                "explanation": "Git is version control. GitHub is a cloud repository. Workflow: `git init`, `git add .`, `git commit -m 'message'`, `git push origin main`. This is essential for collaboration and deployment (many hosts deploy straight from GitHub).",
+                "use_case": "Backing up your code and enabling continuous deployment.",
+                "example": "git add .\ngit commit -m 'Initial commit'\ngit remote add origin https://github.com/username/repo.git\ngit push -u origin main"
+              },
+              {
+                "topic": "43.3 Deploying a static site to Netlify or Vercel",
+                "explanation": "Netlify and Vercel offer free hosting for static sites. You can drag-and-drop a folder or connect your GitHub repository. They automatically build your site on every push and give you a live preview URL.",
+                "use_case": "Deploying your personal website in 1 minute.",
+                "example": "1. Build your project (or just have a folder). 2. Go to Netlify, drag your folder into the deploy area. 3. You get a URL like `random-name.netlify.app`. 4. Set up your custom domain."
+              },
+              {
+                "topic": "43.4 Deploying a simple site to GitHub Pages",
+                "explanation": "GitHub Pages serves static sites directly from a GitHub repository. It's free and easy for simple projects. Enable it in the repository settings for the `main` branch.",
+                "use_case": "Hosting a documentation page or a simple app.",
+                "example": "Push your `index.html` to a repo. Go to Settings > Pages, select branch `main`, and save. Your site is live at `username.github.io/repository`."
+              },
+              {
+                "topic": "43.5 FTP clients (FileZilla) for traditional hosting",
+                "explanation": "FTP (File Transfer Protocol) is an older method of uploading files to servers. FileZilla is a popular client. You connect using a host, username, password, and port, then drag and drop files to the server's `public_html` folder.",
+                "use_case": "Using shared hosting providers that don't have Git integration.",
+                "example": "Connect to `ftp.yourhost.com`, upload `index.html` and your `css/`, `js/` folders, and the site is live."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_number": "FINAL CAPSTONE",
+        "part_title": "GRADUATION EXAMS (The Proof of Expertise)",
+        "description": "You are now ready. These three projects are the certification that you are no longer a layman, but a fully capable web creator.",
+        "projects": [
+          {
+            "name": "Project 1: Personal Portfolio Landing Page",
+            "description": "Build a fully responsive, animated personal portfolio. Include semantic HTML, Flexbox/Grid for layout, CSS animations for scroll reveals, and a dark/light mode toggle using JavaScript and localStorage. Must be 100% accessible.",
+            "tech_stack": "HTML, CSS, JS, LocalStorage."
+          },
+          {
+            "name": "Project 2: E-Commerce Product Cart",
+            "description": "Build a product listing page. Fetch product data from a hardcoded Array of Objects. Allow users to filter by category, sort by price, add items to a cart, update the total price dynamically, and persist the cart to localStorage. Use DOM manipulation and events extensively.",
+            "tech_stack": "JS (Arrays, Objects, DOM, Events, Storage)."
+          },
+          {
+            "name": "Project 3: Live Weather Dashboard",
+            "description": "Build a weather dashboard that uses the `fetch()` API to get live weather data from a public weather API (like OpenWeatherMap). Handle loading states, error states (network errors, 404s), and display the current temperature, humidity, and a 5-day forecast with icons. Must be responsive and elegantly styled.",
+            "tech_stack": "JS (Async/Await, Fetch, APIs), CSS (Responsive, Animations)."
+          }
+        ],
+        "final_word": "Congratulations. You have completed the most exhaustive, no-shortcuts, no-summaries course available. You have traveled from the blank screen to a deployable, interactive, accessible, high-performance web application. The knowledge contained in these 8 Parts, 43 Chapters, and over 200 topics is the exact foundation used by senior developers at top companies. You are no longer a layman. You are an expert. Go build something incredible."
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix: MKU IT Club",
+  "description": "The official student community hub for Mount Kenya University IT Club. Connect, learn, and build with resources, chat channels, and events.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
