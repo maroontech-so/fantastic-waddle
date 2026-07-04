@@ -13,6 +13,7 @@ interface LibraryViewProps {
   onTryCode?: (code: { html: string; css: string; js: string; title: string }) => void;
   onRewardXP?: (amount: number, type: 'checkin' | 'engagement' | 'learning' | 'contribution', description: string) => void;
   initialTab?: 'files' | 'tutorials';
+  onViewingDocumentChange?: (isViewing: boolean) => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -23,6 +24,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onTryCode,
   onRewardXP,
   initialTab = 'files',
+  onViewingDocumentChange,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'files' | 'tutorials'>(initialTab);
   
@@ -52,6 +54,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       return [];
     }
   });
+
+  useEffect(() => {
+    if (activeSubTab === 'tutorials') {
+      onViewingDocumentChange?.(isViewingDocument);
+    } else {
+      onViewingDocumentChange?.(false);
+    }
+  }, [isViewingDocument, activeSubTab, onViewingDocumentChange]);
 
   const allSyllabusLessons = useMemo(() => getAllLessonsFromTutorial(tutorialData), []);
 
@@ -200,16 +210,27 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     const current = allSyllabusLessons[activeLessonIndex];
     
     return (
-      <div className="flex flex-col bg-slate-700 dark:bg-slate-900 rounded-2xl border border-slate-600 dark:border-slate-800 shadow-xl overflow-hidden min-h-[85vh] animate-scale-in">
-        {/* PDF Reader Top Toolbar */}
-        <div className="bg-slate-800 text-slate-100 px-4 py-2 flex flex-wrap gap-3 items-center justify-between border-b border-slate-700 shrink-0 select-none">
-          {/* Back to Catalog */}
+      <div className="flex flex-col bg-slate-100 dark:bg-slate-950 md:rounded-2xl md:border md:border-slate-200 dark:md:border-slate-800 md:shadow-xl overflow-hidden min-h-screen md:min-h-[85vh] animate-scale-in w-full">
+        {/* Floating Top Centre Home / Table of Contents Icon for Mobile */}
+        <div className="md:hidden fixed top-3 left-1/2 -translate-x-1/2 z-[100]">
           <button
             onClick={() => setIsViewingDocument(false)}
-            className="flex items-center gap-1 text-xs font-bold text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-650 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white hover:bg-blue-600 font-extrabold text-xs px-4 py-2 rounded-full shadow-2xl border border-slate-700/80 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+          >
+            <Home className="w-4 h-4 text-indigo-400" />
+            <span>Table of Contents</span>
+          </button>
+        </div>
+
+        {/* PDF Reader Top Toolbar */}
+        <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-2.5 pt-14 md:pt-2.5 flex flex-wrap gap-3 items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 select-none shadow-xs">
+          {/* Back to Catalog / Table of Contents */}
+          <button
+            onClick={() => setIsViewingDocument(false)}
+            className="hidden md:flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Library Catalog</span>
+            <span>{activeSubTab === 'tutorials' ? 'Table of Contents' : 'Library Catalog'}</span>
           </button>
 
           {/* Document Title */}
@@ -261,27 +282,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             </button>
           </div>
 
-          {/* Zoom Controls */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-900/60 px-2 py-1 rounded-lg text-xs">
-            <button
-              onClick={() => setPdfZoom(prev => Math.max(75, prev - 10))}
-              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
-              title="Zoom Out"
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-[10px] font-mono text-slate-300 w-10 text-center select-none">
-              {pdfZoom}%
-            </span>
-            <button
-              onClick={() => setPdfZoom(prev => Math.min(150, prev + 10))}
-              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
-              title="Zoom In"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
           {/* Actions */}
           <div className="flex items-center gap-2">
             {!isViewingCapstone && (
@@ -290,7 +290,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   masteredLessons.includes(current?.topic)
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-750 hover:bg-slate-650 text-slate-200 hover:text-white border border-slate-600'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                 }`}
               >
                 <BookOpenCheck className="w-3.5 h-3.5" />
@@ -308,7 +308,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   onToast(`Download Started: Lesson_${activeLessonIndex + 1}_Documentation.pdf`);
                 }
               }}
-              className="p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               title="Download Document"
             >
               <Download className="w-4 h-4" />
@@ -316,16 +316,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           </div>
         </div>
 
-        {/* PDF Document Canvas (Grey scrollable space) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-650 dark:bg-slate-950/80 scrollbar-thin select-text">
+        {/* PDF Document Canvas (Scrollable space) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 dark:bg-slate-950 scrollbar-thin select-text">
           {/* Document Sheet */}
-          <div 
-            className="w-full max-w-3xl bg-white text-slate-950 shadow-2xl rounded-sm p-8 sm:p-14 md:p-16 mx-auto min-h-[297mm] relative transition-transform duration-200 ease-out origin-top border border-slate-300/40 select-text"
-            style={{ 
-              transform: `scale(${pdfZoom / 100})`,
-              marginBottom: `${Math.max(0, (pdfZoom - 100) * 3)}px`
-            }}
-          >
+          <div className="w-full max-w-4xl bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm md:shadow-xl rounded-xl md:rounded-2xl p-6 sm:p-10 md:p-14 mx-auto border border-slate-200 dark:border-slate-800 select-text relative">
             {/* Watermark / Logo background */}
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.015] pointer-events-none select-none">
               <img src="/logo.svg" className="w-96 h-96" alt="" />
@@ -520,7 +514,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 px-4 md:px-8 pt-6 pb-24 relative max-w-5xl mx-auto">
+    <div className={isViewingDocument && activeSubTab === 'tutorials' ? "w-full h-full flex flex-col max-w-6xl mx-auto md:px-6 md:py-4" : "space-y-6 px-4 md:px-8 pt-6 pb-24 relative max-w-5xl mx-auto"}>
       {activeSubTab === 'files' ? (
         <>
           {/* Official IT Club Github Repo Card (Only on Resources page) */}
@@ -722,33 +716,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       ) : isViewingDocument ? (
         renderPdfReader()
       ) : (
-        <div className="space-y-6 animate-fade-in">
-          {/* Dynamic Course Header Card with Mastered Progress */}
-          <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-2xl p-5 md:p-6 border border-slate-800 shadow-xl relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
-            <div className="relative z-10 space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-indigo-400">
-                  <GraduationCap className="w-5 h-5 animate-pulse" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest">Dynamic Student Curriculum</span>
-                </div>
-                <h3 className="text-base md:text-lg font-black tracking-tight">{tutorialData.course.title}</h3>
-                <p className="text-slate-300 text-[11px] font-semibold leading-relaxed max-w-3xl">
-                  {tutorialData.course.subtitle}
-                </p>
-              </div>
-
-              {/* Mastered Progress Bar */}
-              <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-                  <Award className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Curriculum Mastery: <strong className="text-white font-black">{masteredLessons.length}</strong> of {allSyllabusLessons.length} topics ({Math.round((masteredLessons.length / (allSyllabusLessons.length || 1)) * 100)}%)</span>
-                </div>
-                <div className="w-full sm:w-48 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
-                  <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-full transition-all duration-500" style={{ width: `${Math.min(100, (masteredLessons.length / (allSyllabusLessons.length || 1)) * 100)}%` }}></div>
-                </div>
-              </div>
+        <div className="space-y-4 animate-fade-in">
+          {/* Simple Curriculum Mastery Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white dark:bg-slate-900 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
+              <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+              <span>Curriculum Mastery: <strong className="text-blue-600 dark:text-blue-400 font-black">{masteredLessons.length}</strong> of {allSyllabusLessons.length} topics ({Math.round((masteredLessons.length / (allSyllabusLessons.length || 1)) * 100)}%)</span>
             </div>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg w-fit">
+              Unified Web Course
+            </span>
           </div>
 
           {/* Syllabus Global Search & Filter Bar */}
