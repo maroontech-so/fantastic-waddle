@@ -15,7 +15,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { MemberProfile } from './MemberBioModal';
-import { getRelativeTimeString } from './ChatView';
+import { getRelativeTimeString, DEFAULT_POSTS } from './ChatView';
 
 export interface EngagementPost {
   id: string;
@@ -326,7 +326,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
                         </button>
                       </div>
 
-                      <pre className="p-4 overflow-auto text-emerald-400 font-mono text-[10px] leading-relaxed text-left flex-1 bg-slate-950 select-text">
+                      <pre className="p-4 overflow-auto whitespace-pre-wrap break-words text-emerald-400 font-mono text-[10px] leading-relaxed text-left flex-1 bg-slate-950 select-text">
                         <code>{post.code}</code>
                       </pre>
                     </div>

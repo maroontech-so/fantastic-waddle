@@ -6,6 +6,8 @@ import { LibraryView } from './components/LibraryView';
 import { ChatView } from './components/ChatView';
 import { ProfileView } from './components/ProfileView';
 import { EditorView } from './components/EditorView';
+import { ThreeDBackground } from './components/ThreeDBackground';
+import { ScannedProfileModal } from './components/ScannedProfileModal';
 import { auth, db, googleProvider } from './firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, onSnapshot, query } from 'firebase/firestore';
@@ -42,6 +44,9 @@ export default function App() {
     sessionStorage.setItem('advocode_current_view', currentView);
   }, [currentView]);
 
+  const [initialDMUserUid, setInitialDMUserUid] = useState<string | null>(null);
+  const [scannedProfileUid, setScannedProfileUid] = useState<string | null>(null);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const actUid = params.get('uid');
@@ -51,6 +56,13 @@ export default function App() {
         .then(() => console.log("User profile updated as activated."))
         .catch(err => console.error("Error activating account:", err));
       
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+
+    const profileUid = params.get('profile');
+    if (profileUid) {
+      setScannedProfileUid(profileUid);
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
@@ -334,7 +346,7 @@ export default function App() {
                 <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #334155; background-color: #f8fafc; border-radius: 16px;">
                   <div style="text-align: center; margin-bottom: 30px;">
                     <div style="display: inline-block; background-color: #2563eb; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
-                      <img src="https://advocade.studenthubmku.xyz/logo.svg" style="width: 48px; height: 48px; filter: brightness(0) invert(1);" alt="AdvocoDe logo" />
+                      <img src="logo.svg" style="width: 48px; height: 48px; filter: brightness(0) invert(1);" alt="AdvocoDe logo" />
                     </div>
                     <h2 style="font-size: 24px; font-weight: 800; color: #1e293b; margin: 0; font-family: monospace;">&lt;/AdvocoDe&gt;</h2>
                     <p style="color: #2563eb; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 0 0;">Defend. Develop. Dominate.</p>
@@ -507,12 +519,13 @@ export default function App() {
 
   return (
     <div className={`antialiased text-slate-900 flex h-screen w-full bg-slate-50 overflow-hidden font-sans ${textSize === 'large' ? 'text-scale-large' : textSize === 'larger' ? 'text-scale-larger' : 'text-scale-normal'}`}>
+      <ThreeDBackground />
       
       {/* 1. SPLASH SCREEN (Mounts if splashActive is true) */}
       {splashActive && (
         <div className="fixed inset-0 z-[100] flex flex-col justify-center items-center bg-slate-900 transition-opacity duration-300">
           <div className="w-30 h-27 bg-blue-600 rounded-3xl shadow-lg flex items-center justify-center mb-6 animate-pulse">
-            <img src="/logo.svg" width="24px" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
+            <img src="logo.svg" width="24px" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
           </div>
           <h1 className="text-4xl font-light tracking-tight text-white font-mono">&lt;/AdvocoDe&gt;</h1>
           <p className="text-blue-400 mt-3 font-light text-sm tracking-wide font-mono uppercase">Defend. Develop. Dominate.</p>
@@ -528,7 +541,7 @@ export default function App() {
 
             <div className="mb-8 text-center mt-2">
               <div className="w-30 h-26 bg-blue-600 rounded-3xl shadow-md flex items-center justify-center mb-5 mx-auto">
-                <img src="/logo.svg" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
+                <img src="logo.svg" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
               </div>
               <h1 className="text-2xl font-light mb-1.5 text-slate-850 tracking-tight font-display">
                 {isLoginMode ? 'Welcome Back' : 'Create Account'}
@@ -674,6 +687,7 @@ export default function App() {
             user={user}
             onSignOut={handleSignOut}
             onToast={triggerToast}
+            allUsers={allUsers}
           />
 
           {/* Desktop Navigation Drawer Sidebar */}
@@ -683,6 +697,7 @@ export default function App() {
             user={user}
             onSignOut={handleSignOut}
             onToast={triggerToast}
+            allUsers={allUsers}
           />
 
           {/* Main Content Area */}
@@ -753,6 +768,8 @@ export default function App() {
                   onRewardXP={handleRewardXP}
                   allUsers={allUsers}
                   currentUser={user}
+                  initialDMUserUid={initialDMUserUid}
+                  onClearInitialDMUser={() => setInitialDMUserUid(null)}
                 />
               )}
 
@@ -806,6 +823,21 @@ export default function App() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* 5. SCANNED PROFILE VERIFIED PASSPORT OVERLAY */}
+      {scannedProfileUid && (
+        <ScannedProfileModal
+          uid={scannedProfileUid}
+          onClose={() => setScannedProfileUid(null)}
+          onStartDM={(targetUid) => {
+            setInitialDMUserUid(targetUid);
+            setCurrentView('chat');
+          }}
+          allUsers={allUsers}
+          onToast={triggerToast}
+          currentUser={user}
+        />
       )}
     </div>
   );

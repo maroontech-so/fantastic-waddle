@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Library, MessageSquare, User as UserIcon, Settings, LogOut, Code2, Terminal, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
+import { Library, MessageSquare, User as UserIcon, Settings, LogOut, Terminal, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { User } from '../types';
 
 interface NavigationProps {
@@ -8,6 +8,7 @@ interface NavigationProps {
   user: User | null;
   onSignOut: () => void;
   onToast: (msg: string) => void;
+  allUsers?: User[];
 }
 
 export const Sidebar: React.FC<NavigationProps> = ({
@@ -16,6 +17,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
   user,
   onSignOut,
   onToast,
+  allUsers,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('mku_sidebar_collapsed') === 'true';
@@ -141,6 +143,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
         </button>
 
 
+
       </nav>
 
       {user && (
@@ -172,6 +175,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
           </button>
         </div>
       )}
+
     </aside>
   );
 };
@@ -236,6 +240,7 @@ interface AndroidDrawerProps {
   user: User | null;
   onSignOut: () => void;
   onToast: (msg: string) => void;
+  allUsers?: User[];
 }
 
 export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
@@ -246,6 +251,7 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
   user,
   onSignOut,
   onToast,
+  allUsers,
 }) => {
   return (
     <div
@@ -328,7 +334,7 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
         </div>
 
         {/* Drawer Bottom Actions */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-2">
           <button
             onClick={() => {
               onSignOut();
@@ -343,4 +349,3 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
     </div>
   );
 };
-

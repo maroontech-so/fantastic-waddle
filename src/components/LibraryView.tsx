@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Home, ChevronRight, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy } from 'lucide-react';
+import { Search, Home, ChevronRight, ChevronLeft, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy } from 'lucide-react';
 import { LibraryFolder, LibraryFile, FileType } from '../types';
+import { motion, AnimatePresence } from 'motion/react';
 import tutorialData from '../tutorial.json';
 import { getTemplateForTopic, getTemplateForProject, getAllLessonsFromTutorial, TutorialTopicItem } from '../utils/tutorialSandbox';
 
@@ -36,6 +37,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   // Dynamic tutorial states
+  const [activeLessonIndex, setActiveLessonIndex] = useState<number>(0);
+  const [isViewingCapstone, setIsViewingCapstone] = useState<boolean>(false);
   const [selectedPartIndex, setSelectedPartIndex] = useState<number>(0);
   const [expandedChapterIndex, setExpandedChapterIndex] = useState<number | null>(0);
   const [expandedTopicTitle, setExpandedTopicTitle] = useState<string | null>(null);
@@ -49,6 +52,46 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   });
 
   const allSyllabusLessons = useMemo(() => getAllLessonsFromTutorial(tutorialData), []);
+
+  // Keyboard navigation for turning book pages
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeSubTab !== 'tutorials' || syllabusSearch.trim() || isViewingCapstone) return;
+      if (e.key === 'ArrowRight') {
+        setActiveLessonIndex((prev) => Math.min(allSyllabusLessons.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        setActiveLessonIndex((prev) => Math.max(0, prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSubTab, allSyllabusLessons.length, syllabusSearch, isViewingCapstone]);
+
+  // Synchronize Part index and Expanded Chapter when activeBookLesson changes
+  useEffect(() => {
+    if (activeSubTab === 'tutorials' && allSyllabusLessons[activeLessonIndex]) {
+      const current = allSyllabusLessons[activeLessonIndex];
+      // Find matching Part index
+      const pIdx = tutorialData.course.parts.findIndex(
+        (part: any) => part.part_title === current.partTitle
+      );
+      if (pIdx !== -1) {
+        setSelectedPartIndex(pIdx);
+        setIsViewingCapstone(false);
+
+        // Find chapter index in that Part
+        const partObj = tutorialData.course.parts[pIdx];
+        if (partObj.chapters) {
+          const cIdx = partObj.chapters.findIndex(
+            (chap: any) => chap.chapter_number === current.chapterNumber
+          );
+          if (cIdx !== -1) {
+            setExpandedChapterIndex(cIdx);
+          }
+        }
+      }
+    }
+  }, [activeLessonIndex, allSyllabusLessons, activeSubTab]);
   const matchingSearchLessons = useMemo(() => {
     if (!syllabusSearch.trim()) return [];
     const q = syllabusSearch.toLowerCase();
@@ -413,311 +456,494 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   No syllabus topics matched your query. Try a keyword like "HTML", "CSS", "flex", or "button".
                 </div>
               ) : (
-                matchingSearchLessons.map((item, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3 hover:border-slate-300 transition-all">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[9px] font-extrabold text-indigo-500 uppercase tracking-widest block">
-                          Part {item.partNumber} • Chapter {item.chapterNumber}: {item.chapterTitle}
-                        </span>
-                        <h4 className="font-extrabold text-sm text-slate-800 mt-0.5 flex items-center gap-2">
-                          {item.topic}
-                        </h4>
+                matchingSearchLessons.map((item, idx) => {
+                  const lessonIdx = allSyllabusLessons.findIndex(
+                    (l) => l.topic === item.topic && l.chapterNumber === item.chapterNumber
+                  );
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (lessonIdx !== -1) {
+                          setActiveLessonIndex(lessonIdx);
+                          setIsViewingCapstone(false);
+                          setSyllabusSearch('');
+                          onToast(`📖 Switched book to Page ${lessonIdx + 1}: ${item.topic}`);
+                        }
+                      }}
+                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[9px] font-extrabold text-indigo-500 uppercase tracking-widest block">
+                            Part {item.partNumber} • Chapter {item.chapterNumber}: {item.chapterTitle}
+                          </span>
+                          <h4 className="font-extrabold text-sm text-slate-800 mt-0.5 flex items-center gap-2 group-hover:text-blue-600 transition-colors">
+                            {item.topic}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={(e) => handleToggleMastered(item.topic, e)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                              masteredLessons.includes(item.topic)
+                                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            <BookOpenCheck className="w-3 h-3" />
+                            {masteredLessons.includes(item.topic) ? '✓ Mastered' : 'Mark Mastered'}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => handleToggleMastered(item.topic, e)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
-                            masteredLessons.includes(item.topic)
-                              ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          <BookOpenCheck className="w-3 h-3" />
-                          {masteredLessons.includes(item.topic) ? '✓ Mastered' : 'Mark Mastered'}
-                        </button>
+                      <p className="text-slate-600 text-xs font-semibold">{item.explanation}</p>
+                      <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between text-[10px] text-emerald-400 font-mono font-bold mb-1">
+                          <span>Code Example</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(item.example);
+                              onToast(`✓ Copied snippet for "${item.topic}"`);
+                            }}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <pre className="text-slate-300 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap break-words">{item.example}</pre>
                       </div>
                     </div>
-                    <p className="text-slate-600 text-xs font-semibold">{item.explanation}</p>
-                    <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 relative">
-                      <div className="flex items-center justify-between text-[10px] text-emerald-400 font-mono font-bold mb-1">
-                        <span>Code Example</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(item.example);
-                            onToast(`✓ Copied snippet for "${item.topic}"`);
-                          }}
-                          className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded cursor-pointer"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      <pre className="text-slate-300 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">{item.example}</pre>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           ) : (
-            <>
-              {/* Parts Quick Navigation Horizontal Slider */}
-              <div className="space-y-2">
-                <h4 className="font-extrabold text-[10px] uppercase tracking-widest text-slate-400">Course Journey Navigation</h4>
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar select-none">
-                  {tutorialData.course.parts.map((part: any, index: number) => {
-                    const isSelected = selectedPartIndex === index;
-                    const isCap = part.part_title.toLowerCase().includes('capstone');
+            <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[70vh]">
+              {/* Left Column: Table of Contents Sidebar */}
+              <div className="w-full lg:w-72 shrink-0 flex flex-col bg-white/70 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden h-[70vh]">
+                {/* ToC Header */}
+                <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                    <BookOpen className="w-4.5 h-4.5" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Table of Contents</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    📖 Navigate through Modules
+                  </p>
+                </div>
+
+                {/* ToC List (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
+                  {tutorialData.course.parts.map((part: any, pIdx: number) => {
+                    const isPartActive = selectedPartIndex === pIdx && !isViewingCapstone;
+                    const isCapstone = part.part_title.toLowerCase().includes('capstone') || !part.chapters;
+
+                    if (isCapstone) {
+                      return (
+                        <div key={pIdx} className="space-y-1">
+                          <button
+                            onClick={() => {
+                              setSelectedPartIndex(pIdx);
+                              setIsViewingCapstone(true);
+                              onToast("🎓 Opened Graduation Exams & Capstone Projects");
+                            }}
+                            className={`w-full text-left p-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-between border ${
+                              isViewingCapstone && selectedPartIndex === pIdx
+                                ? 'bg-amber-500 border-amber-400 text-slate-950 shadow-sm'
+                                : 'bg-amber-50/40 dark:bg-amber-950/10 border-amber-200/40 dark:border-amber-900/30 text-amber-800 dark:text-amber-400 hover:bg-amber-100/50'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2 truncate">
+                              <Award className="w-3.5 h-3.5" />
+                              <span className="truncate">Graduation Exams</span>
+                            </span>
+                            <span className="text-[8px] bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-300 font-black px-1.5 py-0.5 rounded uppercase shrink-0">
+                              Exams
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedPartIndex(index);
-                          setExpandedChapterIndex(0); // auto-expand first chapter on shift
-                          setExpandedTopicTitle(null);
-                          onToast(`Switched to: ${part.part_title}`);
-                        }}
-                        className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/10 scale-[1.02]'
-                            : 'bg-white border-slate-200 text-slate-600 hover:text-slate-800 hover:border-slate-300'
-                        }`}
-                      >
-                        {isCap ? (
-                          <>
-                            <Award className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Graduation Exams</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></span>
-                            <span>Part {part.part_number}: {part.part_title}</span>
-                          </>
+                      <div key={pIdx} className="space-y-1">
+                        {/* Part Header (Collapsible) */}
+                        <button
+                          onClick={() => {
+                            setSelectedPartIndex(pIdx);
+                            setIsViewingCapstone(false);
+                            // Set book reader to first topic of this part
+                            const firstLessonOfPart = allSyllabusLessons.findIndex(
+                              (l) => l.partTitle === part.part_title
+                            );
+                            if (firstLessonOfPart !== -1) {
+                              setActiveLessonIndex(firstLessonOfPart);
+                            }
+                            onToast(`Switched to Part ${part.part_number}: ${part.part_title}`);
+                          }}
+                          className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between border ${
+                            isPartActive
+                              ? 'bg-blue-600 border-blue-500 text-white shadow-sm font-extrabold'
+                              : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100/80'
+                          }`}
+                        >
+                          <span className="truncate mr-1">
+                            Part {part.part_number}: {part.part_title}
+                          </span>
+                          <ChevronRight
+                            className={`w-3 h-3 shrink-0 transition-transform ${
+                              selectedPartIndex === pIdx && !isViewingCapstone ? 'rotate-90' : ''
+                            }`}
+                          />
+                        </button>
+
+                        {/* Chapters Inside Part */}
+                        {selectedPartIndex === pIdx && !isViewingCapstone && part.chapters && (
+                          <div className="pl-2.5 pr-1 py-1 border-l-2 border-blue-100 dark:border-slate-800 space-y-2 mt-1.5 animate-fade-in">
+                            {part.chapters.map((chapter: any, cIdx: number) => {
+                              const isChapterExpanded = expandedChapterIndex === cIdx;
+                              return (
+                                <div key={cIdx} className="space-y-1">
+                                  <button
+                                    onClick={() => setExpandedChapterIndex(isChapterExpanded ? null : cIdx)}
+                                    className="w-full text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 py-1 hover:text-slate-900 dark:hover:text-slate-200 flex items-center justify-between transition-colors"
+                                  >
+                                    <span className="truncate">Ch {chapter.chapter_number}: {chapter.chapter_title}</span>
+                                    <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded-full shrink-0 scale-90">
+                                      {chapter.topics.length}
+                                    </span>
+                                  </button>
+
+                                  {isChapterExpanded && chapter.topics && (
+                                    <div className="pl-1.5 space-y-1 mt-1">
+                                      {chapter.topics.map((topic: any, tIdx: number) => {
+                                        const globalIdx = allSyllabusLessons.findIndex(
+                                          (l) => l.topic === topic.topic && l.chapterNumber === chapter.chapter_number
+                                        );
+                                        const isCurrent = activeLessonIndex === globalIdx && !isViewingCapstone;
+                                        const isMastered = masteredLessons.includes(topic.topic);
+
+                                        return (
+                                          <button
+                                            key={tIdx}
+                                            onClick={() => {
+                                              if (globalIdx !== -1) {
+                                                setActiveLessonIndex(globalIdx);
+                                                setIsViewingCapstone(false);
+                                              }
+                                            }}
+                                            className={`w-full text-left py-1.5 px-2 rounded-lg text-[10px] font-semibold transition-all flex items-center justify-between gap-1.5 ${
+                                              isCurrent
+                                                ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/30'
+                                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/30'
+                                            }`}
+                                          >
+                                            <span className="truncate flex items-center gap-1.5">
+                                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                                isCurrent ? 'bg-blue-500 animate-pulse' : isMastered ? 'bg-emerald-500' : 'bg-slate-300'
+                                              }`}></span>
+                                              <span className="truncate">{topic.topic}</span>
+                                            </span>
+                                            {isMastered && (
+                                              <span className="text-[8px] text-emerald-500 font-extrabold shrink-0">✓</span>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Selected Part Meta Details & Chapters Accordion */}
-              <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Part Overview</span>
-                  <p className="text-slate-600 text-xs font-bold leading-relaxed mt-1">
-                    {tutorialData.course.parts[selectedPartIndex].description}
-                  </p>
+              {/* Right Column: Immersive Book Reading Sheet */}
+              <div className="flex-1 bg-gradient-to-br from-amber-50/10 via-white to-amber-50/5 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-950 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-md p-5 md:p-7 flex flex-col justify-between relative overflow-hidden h-[70vh]">
+                {/* Book Bind Shadow Simulation (Depth) */}
+                <div className="absolute top-0 left-0 bottom-0 w-5 bg-gradient-to-r from-slate-200/40 via-slate-100/5 to-transparent dark:from-black/20 dark:via-transparent pointer-events-none border-r border-slate-150/10 z-10"></div>
+                
+                {/* Book header */}
+                <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3 mb-4 flex justify-between items-center gap-2">
+                  {isViewingCapstone ? (
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                        FINAL GRADUATION PORTAL
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-[8.5px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                        Part {allSyllabusLessons[activeLessonIndex]?.partNumber}
+                      </span>
+                      <ChevronRight className="w-3 h-3 text-slate-300" />
+                      <span className="text-slate-500 dark:text-slate-400 font-bold text-[9.5px] uppercase tracking-wider truncate max-w-[200px] md:max-w-xs">
+                        Ch {allSyllabusLessons[activeLessonIndex]?.chapterNumber}: {allSyllabusLessons[activeLessonIndex]?.chapterTitle}
+                      </span>
+                    </div>
+                  )}
+
+                  {!isViewingCapstone && (
+                    <div className="flex items-center gap-1 text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
+                      <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Page {activeLessonIndex + 1} of {allSyllabusLessons.length}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Render Chapters or Capstone Projects */}
-                {(() => {
-                  const currentPart = tutorialData.course.parts[selectedPartIndex] as any;
-                  const isCapstone = currentPart.part_title.toLowerCase().includes('capstone') || !currentPart.chapters;
+                {/* Animated Page Content */}
+                <div className="flex-1 overflow-y-auto pr-1">
+                  <AnimatePresence mode="wait">
+                    {isViewingCapstone ? (
+                      <motion.div
+                        key="capstone"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.15 }}
+                        className="space-y-5"
+                      >
+                        <div>
+                          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                            🎓 {tutorialData.course.parts[selectedPartIndex]?.part_title}
+                          </h3>
+                          <p className="text-slate-600 dark:text-slate-400 text-xs font-semibold mt-1">
+                            {tutorialData.course.parts[selectedPartIndex]?.description}
+                          </p>
+                        </div>
 
-                  if (isCapstone) {
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {currentPart.projects?.map((project: any, pIdx: number) => (
-                          <div
-                            key={pIdx}
-                            className="bg-white rounded-2xl border-2 border-amber-200/60 p-4 md:p-5 shadow-sm hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between"
-                          >
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="bg-amber-100 text-amber-800 text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-200">
-                                  Exams
-                                </span>
-                                <Award className="w-5 h-5 text-amber-500" />
-                              </div>
-                              <div>
-                                <h5 className="font-extrabold text-xs text-slate-800 leading-tight">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {tutorialData.course.parts[selectedPartIndex]?.projects?.map((project: any, pIdx: number) => (
+                            <div
+                              key={pIdx}
+                              className="bg-white/80 dark:bg-slate-900 rounded-2xl border-2 border-amber-200/40 dark:border-amber-900/30 p-4 shadow-sm hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between"
+                            >
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-200/50">
+                                    GRADUATION EXAM
+                                  </span>
+                                  <Award className="w-4.5 h-4.5 text-amber-500" />
+                                </div>
+                                <h5 className="font-extrabold text-xs text-slate-800 dark:text-white leading-tight">
                                   {project.name}
                                 </h5>
-                                <p className="text-slate-500 text-[10.5px] leading-relaxed font-semibold mt-1.5">
+                                <p className="text-slate-500 dark:text-slate-400 text-[10.5px] leading-relaxed font-semibold">
                                   {project.description}
                                 </p>
                               </div>
-                            </div>
 
-                            <div className="pt-4 mt-4 border-t border-slate-100 space-y-3.5">
-                              <div className="flex flex-wrap gap-1.5">
-                                {project.tech_stack.split(',').map((tech: string, tIdx: number) => (
-                                  <span key={tIdx} className="bg-slate-100 text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-200">
-                                    {tech.trim()}
-                                  </span>
-                                ))}
+                              <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+                                <div className="flex flex-wrap gap-1">
+                                  {project.tech_stack.split(',').map((tech: string, tIdx: number) => (
+                                    <span key={tIdx} className="bg-slate-150 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[8.5px] font-bold px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                      {tech.trim()}
+                                    </span>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const template = getTemplateForProject(project.name);
+                                    if (onTryCode) {
+                                      onTryCode({
+                                        title: project.name,
+                                        html: template.html,
+                                        css: template.css,
+                                        js: template.js,
+                                      });
+                                      if (onRewardXP) {
+                                        onRewardXP(25, 'learning', `Started Graduation Project: ${project.name}`);
+                                      }
+                                      onToast(`Started ${project.name} live coding playground! +25 XP 🚀`);
+                                    }
+                                  }}
+                                  className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Code2 className="w-4 h-4" /> Start Graduation Exam
+                                </button>
                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key={activeLessonIndex}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.15 }}
+                        className="space-y-4"
+                      >
+                        <div>
+                          <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                            <span className="text-indigo-600 dark:text-indigo-400 font-mono">§</span>
+                            {allSyllabusLessons[activeLessonIndex]?.topic}
+                          </h2>
+                        </div>
+
+                        {/* Explanation Paragraph */}
+                        <div className="space-y-1">
+                          <h4 className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                            <BookOpenCheck className="w-3.5 h-3.5 text-blue-500" /> Explanation
+                          </h4>
+                          <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-semibold">
+                            {allSyllabusLessons[activeLessonIndex]?.explanation}
+                          </p>
+                        </div>
+
+                        {/* Analogy Box */}
+                        <div className="bg-amber-50/40 dark:bg-amber-950/10 border border-amber-100/60 dark:border-amber-900/30 rounded-xl p-3.5 relative shadow-xs">
+                          <span className="absolute top-0 right-3.5 transform -translate-y-1/2 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 text-[7px] font-black uppercase px-1.5 py-0.2 rounded border border-amber-200">
+                            ANALOGY
+                          </span>
+                          <div className="space-y-1">
+                            <h4 className="text-[9px] font-extrabold text-amber-800 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                              <Compass className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Mental Model & Analogy
+                            </h4>
+                            <p className="text-amber-950 dark:text-amber-200 text-[11px] font-semibold leading-relaxed">
+                              {allSyllabusLessons[activeLessonIndex]?.use_case}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Lab Code Container */}
+                        <div className="border border-slate-800 bg-slate-950 rounded-xl p-3 shadow-md space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 text-emerald-400">
+                              <Code2 className="w-3.5 h-3.5 animate-pulse" />
+                              <span className="text-[8.5px] font-black uppercase tracking-widest font-mono">Interactive Laboratory</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => {
-                                  const template = getTemplateForProject(project.name);
+                                  navigator.clipboard.writeText(allSyllabusLessons[activeLessonIndex]?.example);
+                                  onToast(`✓ Copied example code for "${allSyllabusLessons[activeLessonIndex]?.topic}"`);
+                                }}
+                                className="bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-[8.5px] font-bold px-2 py-0.5 rounded transition-colors border border-slate-800 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Copy className="w-2.5 h-2.5" /> Copy
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const item = allSyllabusLessons[activeLessonIndex];
+                                  const template = getTemplateForTopic(item, item.partNumber);
                                   if (onTryCode) {
                                     onTryCode({
-                                      title: project.name,
+                                      title: item.topic,
                                       html: template.html,
                                       css: template.css,
                                       js: template.js,
                                     });
                                     if (onRewardXP) {
-                                      onRewardXP(25, 'learning', `Started Graduation Project: ${project.name}`);
+                                      onRewardXP(15, 'learning', `Poured lab code for: ${item.topic}`);
                                     }
-                                    onToast(`Started ${project.name} live coding playground! +25 XP 🚀`);
+                                    onToast(`🚀 Loaded "${item.topic}" lab inside Playground workspace! +15 XP`);
                                   }
                                 }}
-                                className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[9px] font-black px-2.5 py-0.5 rounded transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                               >
-                                <Code2 className="w-4 h-4" /> Start Graduation Project
+                                <Sparkles className="w-2.5 h-2.5 text-slate-950" /> Test Code
                               </button>
                             </div>
                           </div>
-                        ))}
+                          <pre className="text-slate-300 font-mono text-[10px] max-h-32 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words p-2 rounded bg-slate-900/40 border border-slate-900 scrollbar-thin">
+                            {allSyllabusLessons[activeLessonIndex]?.example}
+                          </pre>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Book Footer Nav Controls (Back / Progress slider / Next) */}
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
+                  {/* Paging Buttons */}
+                  <div className="flex items-center gap-2 w-full md:w-auto">
+                    <button
+                      disabled={activeLessonIndex === 0 && !isViewingCapstone}
+                      onClick={() => {
+                        if (isViewingCapstone) {
+                          setIsViewingCapstone(false);
+                          setActiveLessonIndex(allSyllabusLessons.length - 1);
+                        } else {
+                          setActiveLessonIndex((prev) => Math.max(0, prev - 1));
+                        }
+                      }}
+                      className="flex-1 md:flex-none px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> Back
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleMastered(allSyllabusLessons[activeLessonIndex]?.topic, { stopPropagation: () => {} } as any)}
+                      className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        masteredLessons.includes(allSyllabusLessons[activeLessonIndex]?.topic)
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'
+                      }`}
+                    >
+                      <BookOpenCheck className="w-4 h-4" />
+                      {masteredLessons.includes(allSyllabusLessons[activeLessonIndex]?.topic) ? 'Mastered' : 'Mark Lesson'}
+                    </button>
+                  </div>
+
+                  {/* Horizontal visual slider progression */}
+                  {!isViewingCapstone && (
+                    <div className="hidden md:flex flex-1 max-w-xs flex-col gap-0.5 px-4">
+                      <div className="flex justify-between items-center text-[8.5px] font-extrabold text-slate-400">
+                        <span>PAGE PROGRESSION</span>
+                        <span>{Math.round(((activeLessonIndex + 1) / allSyllabusLessons.length) * 100)}%</span>
                       </div>
-                    );
-                  }
-
-                  // Otherwise render standard Syllabus Chapters accordion
-                  return (
-                    <div className="space-y-3">
-                      {currentPart.chapters.map((chapter: any, chapIdx: number) => {
-                        const isChapterExpanded = expandedChapterIndex === chapIdx;
-                        return (
-                          <div
-                            key={chapIdx}
-                            className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all hover:border-slate-300"
-                          >
-                            {/* Chapter Expandable Header */}
-                            <div
-                              onClick={() => setExpandedChapterIndex(isChapterExpanded ? null : chapIdx)}
-                              className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/50 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100/50 shrink-0">
-                                  <BookOpen className="w-4.5 h-4.5" />
-                                </div>
-                                <div>
-                                  <span className="text-[8.5px] font-extrabold text-indigo-500 uppercase tracking-widest block">
-                                    Chapter {chapter.chapter_number}
-                                  </span>
-                                  <h4 className="font-extrabold text-xs text-slate-800 mt-0.5">
-                                    {chapter.chapter_title}
-                                  </h4>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                  {chapter.topics.length} topics
-                                </span>
-                                <span className="text-xs font-extrabold text-blue-600">
-                                  {isChapterExpanded ? 'Hide' : 'Expand'}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Chapter Topics Accordion Inside */}
-                            {isChapterExpanded && (
-                              <div className="p-4 border-t border-slate-100 bg-slate-50/20 space-y-3">
-                                {chapter.topics.map((topic: any, topIdx: number) => {
-                                  const isTopicExpanded = expandedTopicTitle === topic.topic;
-                                  const isMastered = masteredLessons.includes(topic.topic);
-                                  return (
-                                    <div
-                                      key={topIdx}
-                                      className="border border-slate-200/80 rounded-xl bg-white overflow-hidden shadow-xs"
-                                    >
-                                      {/* Topic Title Row */}
-                                      <div
-                                        onClick={() => setExpandedTopicTitle(isTopicExpanded ? null : topic.topic)}
-                                        className="p-3 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50/40 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className={`w-2 h-2 rounded-full ${isMastered ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
-                                          <h5 className={`font-extrabold text-xs ${isMastered ? 'text-emerald-800' : 'text-slate-800'}`}>
-                                            {topic.topic}
-                                          </h5>
-                                          {isMastered && <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded">✓ Mastered</span>}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={(e) => handleToggleMastered(topic.topic, e)}
-                                            className={`px-2 py-0.5 rounded text-[9px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
-                                              isMastered
-                                                ? 'bg-emerald-500 text-white shadow-xs'
-                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                            }`}
-                                          >
-                                            <BookOpenCheck className="w-3 h-3" />
-                                            {isMastered ? 'Mastered' : 'Mark'}
-                                          </button>
-                                          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider shrink-0">
-                                            {isTopicExpanded ? 'Close Detail' : 'Read Topic'}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Topic Extended Body Details */}
-                                      {isTopicExpanded && (
-                                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-4">
-                                          {/* Explanation */}
-                                          <div className="space-y-1.5">
-                                            <span className="text-[8.5px] font-black text-indigo-500 uppercase tracking-widest block">
-                                              Explanation
-                                            </span>
-                                            <p className="text-slate-600 text-xs font-semibold leading-relaxed">
-                                              {topic.explanation}
-                                            </p>
-                                          </div>
-
-                                          {/* Analogy Use Case */}
-                                          <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3.5 space-y-1.5">
-                                            <div className="flex items-center gap-1.5 text-indigo-700">
-                                              <Compass className="w-3.5 h-3.5" />
-                                              <span className="text-[8.5px] font-black uppercase tracking-widest">
-                                                Real-World Analogy & Use Case
-                                              </span>
-                                            </div>
-                                            <p className="text-indigo-950 text-xs font-bold leading-relaxed">
-                                              {topic.use_case}
-                                            </p>
-                                          </div>
-
-                                          {/* Step-by-Step Example / Sandbox experiment instruction */}
-                                          <div className="border border-slate-200 bg-slate-900 rounded-xl p-3.5 space-y-1.5">
-                                            <div className="flex items-center justify-between text-emerald-400">
-                                              <div className="flex items-center gap-1.5">
-                                                <Code2 className="w-3.5 h-3.5" />
-                                                <span className="text-[8.5px] font-black uppercase tracking-widest font-mono">
-                                                  Interactive Lab Example
-                                                </span>
-                                              </div>
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  navigator.clipboard.writeText(topic.example);
-                                                  onToast(`✓ Copied example code for "${topic.topic}"`);
-                                                }}
-                                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-extrabold px-2 py-0.5 rounded transition-colors cursor-pointer flex items-center gap-1"
-                                              >
-                                                <Copy className="w-2.5 h-2.5" /> Copy Code
-                                              </button>
-                                            </div>
-                                            <div className="text-slate-300 font-mono text-[10px] whitespace-pre-wrap leading-relaxed max-w-full overflow-x-auto">
-                                              {topic.example}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      <input
+                        type="range"
+                        min="0"
+                        max={allSyllabusLessons.length - 1}
+                        value={activeLessonIndex}
+                        onChange={(e) => {
+                          setActiveLessonIndex(parseInt(e.target.value));
+                          setIsViewingCapstone(false);
+                        }}
+                        className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
                     </div>
-                  );
-                })()}
+                  )}
+
+                  {/* Forward Next paging */}
+                  <div className="w-full md:w-auto">
+                    {activeLessonIndex === allSyllabusLessons.length - 1 && !isViewingCapstone ? (
+                      <button
+                        onClick={() => {
+                          setIsViewingCapstone(true);
+                          setSelectedPartIndex(tutorialData.course.parts.length - 1);
+                          onToast("🎓 Entered Capstone Projects Graduation Area!");
+                        }}
+                        className="w-full md:w-auto px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all shadow-md active:scale-95 cursor-pointer"
+                      >
+                        Final Exam Portal <ChevronRight className="w-4 h-4 animate-bounce" />
+                      </button>
+                    ) : (
+                      <button
+                        disabled={isViewingCapstone}
+                        onClick={() => {
+                          setActiveLessonIndex((prev) => Math.min(allSyllabusLessons.length - 1, prev + 1));
+                        }}
+                        className="w-full md:w-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      >
+                        Next <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       )}

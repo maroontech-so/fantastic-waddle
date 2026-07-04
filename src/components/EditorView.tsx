@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
+import CodeMirror, { EditorView as CMEditorView } from '@uiw/react-codemirror';
 import { html, htmlLanguage } from '@codemirror/lang-html';
 import { css, cssLanguage } from '@codemirror/lang-css';
 import { javascript, javascriptLanguage } from '@codemirror/lang-javascript';
@@ -759,7 +759,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
               value={htmlCode}
               height="100%"
               theme="dark"
-              extensions={[html(), customHtml]}
+              extensions={[html(), customHtml, CMEditorView.lineWrapping]}
               onChange={(value) => setHtmlCode(value)}
               className="w-full h-full text-xs font-mono overflow-auto"
               basicSetup={{
@@ -779,7 +779,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
               value={cssCode}
               height="100%"
               theme="dark"
-              extensions={[css(), customCss]}
+              extensions={[css(), customCss, CMEditorView.lineWrapping]}
               onChange={(value) => setCssCode(value)}
               className="w-full h-full text-xs font-mono overflow-auto"
               basicSetup={{
@@ -799,7 +799,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
               value={jsCode}
               height="100%"
               theme="dark"
-              extensions={[javascript(), customJs]}
+              extensions={[javascript(), customJs, CMEditorView.lineWrapping]}
               onChange={(value) => setJsCode(value)}
               className="w-full h-full text-xs font-mono overflow-auto"
               basicSetup={{

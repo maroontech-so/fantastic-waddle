@@ -25,29 +25,93 @@ async function startServer() {
     try {
       const recipients = Array.isArray(to) ? to : [to];
       const results = [];
+      let overallSuccess = true;
 
       for (const recipient of recipients) {
         if (!recipient || !recipient.includes("@")) continue;
 
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            from: "AdvocoDe Network <no-reply@advocade.studenthubmku.xyz>",
-            to: recipient,
-            subject: subject,
-            html: html
-          })
-        });
+        console.log(`[Email Dispatch] Commencing multi-stage dispatch for: ${recipient}`);
 
-        const data = await response.json();
-        results.push({ recipient, status: response.status, data });
+        const sendersToTry = [
+          { name: "Root Domain", address: "AdvocoDe <no-reply@studenthubmku.xyz>" },
+          { name: "Subdomain", address: "AdvocoDe <no-reply@advocade.studenthubmku.xyz>" },
+          { name: "Resend Onboarding Sandbox", address: "AdvocoDe <onboarding@resend.dev>" }
+        ];
+
+        const attempts = [];
+        let recipientSuccess = false;
+        let successfulFrom = null;
+        let finalResponseData = null;
+        let finalResponseStatus = 500;
+
+        for (const sender of sendersToTry) {
+          console.log(`[Email Dispatch] Trying sender "${sender.name}": ${sender.address}`);
+          try {
+            const response = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                from: sender.address,
+                to: recipient,
+                subject: subject,
+                html: html
+              })
+            });
+
+            const status = response.status;
+            const data = await response.json();
+            console.log(`[Email Dispatch] Sender "${sender.name}" returned status ${status}:`, data);
+
+            attempts.push({
+              senderType: sender.name,
+              fromAddress: sender.address,
+              status,
+              data
+            });
+
+            finalResponseStatus = status;
+            finalResponseData = data;
+
+            if (status >= 200 && status < 300) {
+              recipientSuccess = true;
+              successfulFrom = sender.address;
+              break; // Stop trying subsequent senders if one succeeds!
+            }
+          } catch (senderErr: any) {
+            console.error(`[Email Dispatch] Error trying sender "${sender.name}":`, senderErr);
+            attempts.push({
+              senderType: sender.name,
+              fromAddress: sender.address,
+              status: "Fetch Exception",
+              data: { error: senderErr.message || "Failed to communicate with Resend API" }
+            });
+          }
+        }
+
+        if (!recipientSuccess) {
+          overallSuccess = false;
+        }
+
+        results.push({
+          recipient,
+          success: recipientSuccess,
+          status: finalResponseStatus,
+          fromUsed: successfulFrom || "None succeeded",
+          data: finalResponseData,
+          attempts
+        });
       }
 
-      res.json({ success: true, results });
+      res.json({
+        success: overallSuccess,
+        results,
+        message: overallSuccess 
+          ? "All emails dispatched successfully." 
+          : "Some or all email dispatches failed. Look at 'attempts' in the diagnostic results for details."
+      });
     } catch (error: any) {
       console.error("Resend API Email Dispatch Error:", error);
       res.status(500).json({ error: error.message || "Internal email server failure" });

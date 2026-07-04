@@ -291,9 +291,11 @@ interface ChatViewProps {
   onRewardXP?: (amount: number, type: 'checkin' | 'engagement' | 'learning' | 'contribution', customMessage?: string) => void;
   allUsers?: AppUser[];
   currentUser?: AppUser | null;
+  initialDMUserUid?: string | null;
+  onClearInitialDMUser?: () => void;
 }
 
-const DEFAULT_POSTS: EngagementPost[] = [
+export const DEFAULT_POSTS: EngagementPost[] = [
   {
     id: 'post_1',
     title: 'Optimizing State in React Custom Hooks',
@@ -450,6 +452,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onRewardXP,
   allUsers,
   currentUser: propUser,
+  initialDMUserUid,
+  onClearInitialDMUser,
 }) => {
   const [posts, setPosts] = useState<EngagementPost[]>([]);
   const [currentUserState, setCurrentUserState] = useState<any>(null);
@@ -529,6 +533,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // Direct Message states
   const [activeDMMember, setActiveDMMember] = useState<string | null>(null);
   const [isDMWidgetExpanded, setIsDMWidgetExpanded] = useState(false);
+  const [chatViewMode, setChatViewMode] = useState<'timeline' | 'messages'>('timeline');
+  const lastKnownMsgIdsRef = useRef<Set<string>>(new Set());
   const [dmSearchText, setDmSearchText] = useState('');
   const [activeDMInput, setActiveDMInput] = useState('');
   const [showAddContactDropdown, setShowAddContactDropdown] = useState(false);
@@ -537,6 +543,51 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [explicitChatIds, setExplicitChatIds] = useState<string[]>([]);
   const [userStatuses, setUserStatuses] = useState<Record<string, any>>({});
   const [allRtdbChats, setAllRtdbChats] = useState<{ community: any[]; saved: any[]; direct: Record<string, any[]> }>({ community: [], saved: [], direct: {} });
+
+  // Unread message tracking state and local storage persistence
+  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('advocode_last_read_times');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Handle auto DM opening from initialDMUserUid (e.g. from scanning Member Verification Badge)
+  useEffect(() => {
+    if (initialDMUserUid) {
+      const targetUserObj = allUsers?.find(u => u.uid === initialDMUserUid);
+      if (targetUserObj) {
+        const rtdbKey = getUserRtdbKey(targetUserObj);
+        setExplicitChatIds(prev => Array.from(new Set([...prev, rtdbKey, targetUserObj.name].filter(Boolean))));
+        setActiveDMMember(rtdbKey);
+        setChatViewMode('messages');
+        setIsDMWidgetExpanded(false);
+        onToast(`Opened direct message conversation with ${targetUserObj.name}`);
+      } else {
+        const fallbackKey = initialDMUserUid.toLowerCase().replace(/[.#$[\]/]/g, '_').replace(/\s+/g, '_');
+        setExplicitChatIds(prev => Array.from(new Set([...prev, fallbackKey].filter(Boolean))));
+        setActiveDMMember(fallbackKey);
+        setChatViewMode('messages');
+        setIsDMWidgetExpanded(false);
+      }
+      if (onClearInitialDMUser) {
+        onClearInitialDMUser();
+      }
+    }
+  }, [initialDMUserUid, allUsers, onClearInitialDMUser]);
+
+  // Mark currently active chat as read
+  useEffect(() => {
+    if (chatViewMode === 'messages' && activeDMMember) {
+      setLastReadTimestamps(prev => {
+        const next = { ...prev, [activeDMMember]: Date.now() };
+        localStorage.setItem('advocode_last_read_times', JSON.stringify(next));
+        return next;
+      });
+    }
+  }, [chatViewMode, activeDMMember, allRtdbChats]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -623,6 +674,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
     };
   }, [myId]);
 
+  const triggerNotificationChime = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+      
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (e) {
+      console.warn("Audio chime context blocked by browser autoplay policy", e);
+    }
+  };
+
   // 2. Global RTDB messages listener
   useEffect(() => {
     const chatsRef = ref(rtdb, 'chats');
@@ -634,11 +710,33 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       Object.entries(allVal).forEach(([roomKey, roomData]: [string, any]) => {
         if (!roomData || typeof roomData !== 'object') return;
-        const msgList = Object.entries(roomData).map(([k, v]: [string, any]) => ({
-          id: k,
-          ...v,
-          sender: (v.senderId === myId || v.senderName === currentUser?.name || v.sender === 'me') ? 'me' : 'them'
-        })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        const msgList = Object.entries(roomData).map(([k, v]: [string, any]) => {
+          const isMe = (v.senderId === myId || v.senderName === currentUser?.name || v.sender === 'me');
+          
+          // Track for working live notification channel
+          if (k && typeof k === 'string') {
+            const isNew = !lastKnownMsgIdsRef.current.has(k);
+            lastKnownMsgIdsRef.current.add(k);
+            
+            const isRealtime = (Date.now() - (v.timestamp || 0)) < 15000;
+            if (isNew && isRealtime && !isMe) {
+              const notifChatsEnabled = localStorage.getItem('advocode_notif_chats') !== 'false';
+              if (notifChatsEnabled) {
+                triggerNotificationChime();
+                const senderLabel = v.senderName || 'Club Member';
+                const bodyLabel = v.text || '';
+                const preview = bodyLabel.length > 45 ? bodyLabel.substring(0, 45) + '...' : bodyLabel;
+                onToast(`💬 New Chat from ${senderLabel}: "${preview}"`);
+              }
+            }
+          }
+
+          return {
+            id: k,
+            ...v,
+            sender: isMe ? 'me' : 'them'
+          };
+        }).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
         if (roomKey === 'community_chat') {
           communityMsgs = msgList;
@@ -776,6 +874,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     return [communityChat, savedChat, ...established];
   }, [allAvailableMembers, allRtdbChats, explicitChatIds]);
+
+  const totalUnreadCount = React.useMemo(() => {
+    let count = 0;
+    dmChats.forEach(chat => {
+      if (chatViewMode === 'messages' && activeDMMember === chat.id) return;
+      const lastRead = lastReadTimestamps[chat.id] || 0;
+      const chatMsgs = chat.messages || [];
+      const unreadInChat = chatMsgs.filter((m: any) => {
+        if (m.sender === 'me' || m.senderId === myId) return false;
+        const msgTs = m.timestamp || 0;
+        return msgTs > lastRead;
+      }).length;
+      count += unreadInChat;
+    });
+    return count;
+  }, [dmChats, lastReadTimestamps, chatViewMode, activeDMMember, myId]);
 
   const handleAddOrOpenChat = (member: any) => {
     setExplicitChatIds(prev => Array.from(new Set([...prev, member.id, member.name, member.memberName].filter(Boolean))));
@@ -1081,7 +1195,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
             .then(res => res.json())
             .then(data => {
               console.log("Broadcast email dispatch success:", data);
-              onToast(`Broadcast notification emailed to ${emails.length} active member(s)!`);
+              if (composeCategory !== 'announcement') {
+                onToast(`Broadcast notification emailed to ${emails.length} active member(s)!`);
+              }
             })
             .catch(err => {
               console.error("Resend broadcast API call failed:", err);
@@ -1316,7 +1432,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     };
     setExplicitChatIds(prev => Array.from(new Set([...prev, mem.id, mem.memberName].filter(Boolean))));
     setActiveDMMember(mem.id);
-    setIsDMWidgetExpanded(true);
+    setChatViewMode('messages');
+    setIsDMWidgetExpanded(false);
     onToast(`Opened direct message conversation with ${memberName}`);
   };
 
@@ -1341,17 +1458,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const currentUserAvatar = currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Alex')}&background=2563EB&color=fff`;
 
   return (
-    <div className="flex w-full h-[calc(100vh-64px)] md:h-[calc(100vh-73px)] overflow-hidden bg-white relative animate-fade-in font-sans">
+    <div className="flex flex-col w-full h-full overflow-hidden bg-slate-50 relative animate-fade-in font-sans">
       
-      {/* CENTRAL TIMELINE PANEL (X-Style Feed) */}
-      <div 
-        ref={timelineRef}
-        className="flex-1 max-w-2xl w-full border-r border-slate-200/60 bg-white flex flex-col h-full overflow-y-auto no-scrollbar relative shrink-0"
-      >
+      {/* VIEW PANEL ROUTER */}
+      {chatViewMode === 'timeline' ? (
+        <div className="flex-1 flex overflow-hidden min-h-0 bg-white">
+          
+          {/* CENTRAL TIMELINE PANEL (X-Style Feed) */}
+          <div 
+            ref={timelineRef}
+            className="flex-1 max-w-2xl w-full border-r border-slate-200/60 bg-white flex flex-col h-full overflow-y-auto no-scrollbar relative shrink-0"
+          >
         
         {/* X-Style Header Row (Sticky) */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 flex flex-col shrink-0 px-4 py-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               {/* On mobile: profile image that slide-out sidebar drawer */}
               <button 
@@ -1365,12 +1486,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   className="w-full h-full object-cover"
                 />
               </button>
-              
+              <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-800">AdvocoDe Feed</h2>
             </div>
 
             {/* Minimalistic clean X-style search filter & message button */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="relative w-full sm:w-44">
+              <div className="relative w-36 sm:w-44">
                 <Search className="absolute left-2.5 top-1.5 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
@@ -1393,18 +1514,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
               {/* DEDICATED SOCIAL MESSAGES TOGGLE BUTTON */}
               <button
                 onClick={() => {
-                  const newState = !isDMWidgetExpanded;
-                  setIsDMWidgetExpanded(newState);
-                  onToast(newState ? 'Opening dedicated social messaging platform...' : 'Direct messages collapsed');
+                  setChatViewMode('messages');
+                  onToast('Opening direct messaging platform...');
                 }}
-                className={`relative p-2 rounded-full border transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0 ${
-                  isDMWidgetExpanded 
-                    ? 'bg-[#008069] border-[#008069] text-white shadow-md shadow-emerald-500/10' 
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+                className="relative p-2 rounded-full border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
                 title="Open Direct Messages"
               >
                 <MessageSquare className="w-4 h-4" />
+                {totalUnreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border border-white shadow-xs animate-pulse">
+                    {totalUnreadCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -1622,6 +1743,61 @@ export const ChatView: React.FC<ChatViewProps> = ({
               const hasCode = !!post.code;
               const isRepliesOpen = expandedCommentPostId === post.id;
 
+              if (post.type === 'announcement') {
+                return (
+                  <div 
+                    key={post.id} 
+                    className="bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-900 text-white shadow-lg my-4 mx-3 sm:mx-4 rounded-2xl p-6 border border-blue-400/30 relative overflow-hidden transition-all hover:shadow-xl hover:scale-[1.01] duration-300 animate-fade-in"
+                  >
+                    {/* Background Graphics */}
+                    <div className="absolute right-[-24px] bottom-[-24px] text-white/10 pointer-events-none select-none z-0">
+                      <Megaphone className="w-36 h-36 transform rotate-12 stroke-[1.5]" />
+                    </div>
+
+                    {/* Subtle Delete Button in top-right if user is author */}
+                    {isMyPost && (
+                      <button
+                        onClick={(e) => handleDeletePost(post.id, e)}
+                        className="absolute top-4 right-4 p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer z-20"
+                        title="Delete announcement"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    <div className="relative z-10 space-y-3">
+                      <div className="flex items-center gap-1.5 bg-white/15 text-white font-extrabold text-[9px] px-2.5 py-1 rounded-md uppercase tracking-wider border border-white/10 w-max shadow-sm backdrop-blur-xs">
+                        <Megaphone className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                        Official Announcement
+                      </div>
+
+                      {post.title && (
+                        <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                          {post.title}
+                        </h3>
+                      )}
+                      
+                      <p className="text-[13px] sm:text-[14px] font-medium text-slate-100 leading-relaxed whitespace-pre-wrap font-sans">
+                        {renderWithMentions(post.content, onToast)}
+                      </p>
+
+                      <div className="flex items-center gap-2 pt-3 border-t border-white/10 mt-2">
+                        <img 
+                          src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author.name)}`} 
+                          alt={post.author.name}
+                          className="w-5.5 h-5.5 rounded-full object-cover border border-white/20"
+                        />
+                        <div className="flex items-center gap-1.5 text-[10.5px]">
+                          <span className="font-extrabold text-white">{post.author.name}</span>
+                          <span className="text-blue-200/60">•</span>
+                          <span className="text-blue-200/80">{getRelativeTimeString(post.timeMs || post.time)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div 
                   key={post.id} 
@@ -1655,25 +1831,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       {post.type === 'announcement' && (
                         <div className="mb-1 bg-white/20 text-white font-extrabold text-[9px] px-2 py-0.5 rounded inline-flex items-center gap-1 uppercase tracking-wider border border-white/30 w-max shadow-sm">
                           <Megaphone className="w-3 h-3 text-white" />
-                          OFFICIAL PINNED ANNOUNCEMENT
+                          OFFICIAL ANNOUNCEMENT
                         </div>
                       )}
 
                       {/* Author Header line */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-baseline min-w-0 flex-wrap sm:flex-nowrap">
-                          <span 
-                            onClick={(e) => handleOpenBio(post.author.name, e)}
-                            className={`font-bold text-[14px] hover:underline cursor-pointer truncate ${post.type === 'announcement' ? 'text-white' : 'text-slate-900'}`}
-                          >
-                            {post.author.name}
-                          </span>
-                          <span 
-                            onClick={(e) => handleOpenBio(post.author.name, e)}
-                            className={`font-medium text-xs ml-1.5 cursor-pointer truncate ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}
-                          >
-                            @{post.author.regNumber.replace(/\//g, '')}
-                          </span>
+                         
+                          
                           <span className={`mx-1.5 text-xs font-normal ${post.type === 'announcement' ? 'text-blue-200' : 'text-slate-300'}`}>•</span>
                           <span className={`text-xs font-normal shrink-0 ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}>
                             {getRelativeTimeString(post.timeMs || post.time)}
@@ -1783,7 +1949,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             </button>
                           </div>
                           
-                          <pre className="p-3 overflow-x-auto text-slate-200 leading-normal scrollbar-thin max-h-56">
+                          <pre className="p-3 overflow-x-auto whitespace-pre-wrap break-words text-slate-200 leading-normal scrollbar-thin max-h-56">
                             <code>{post.code}</code>
                           </pre>
                         </div>
@@ -1958,6 +2124,348 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
 
       </div>
+      </div>
+      ) : (
+        /* CHAT MESSENGER VIEW MODE (WhatsApp style full width side-by-side) */
+        <div className="flex-1 flex overflow-hidden min-h-0 bg-slate-100">
+          
+          {/* LEFT PANEL: Chat rooms list */}
+          <div className={`w-full md:w-[350px] lg:w-[380px] border-r border-slate-200 bg-white flex flex-col h-full shrink-0 ${activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+            {/* Rooms list header */}
+            <div className="p-4 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatViewMode('timeline');
+                    onToast('Returning to Forum Feed timeline...');
+                  }}
+                  className="p-1.5 -ml-1 hover:bg-slate-200 rounded-full text-slate-600 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Back to Feed"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-700" />
+                </button>
+                <h3 className="font-extrabold text-sm text-slate-800 tracking-wide uppercase">Conversations</h3>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAddContactDropdown(!showAddContactDropdown)}
+                  className="p-1.5 hover:bg-slate-200/80 rounded-full text-slate-600 transition-all cursor-pointer flex items-center justify-center"
+                  title="Start a new chat with anyone"
+                >
+                  <Plus className="w-5 h-5 text-slate-700" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick search inside rooms list */}
+            <div className="p-3 bg-white border-b border-slate-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search chats..."
+                  value={dmSearchText}
+                  onChange={(e) => setDmSearchText(e.target.value)}
+                  className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-300 rounded-lg pl-9 pr-6 py-1.5 text-xs font-semibold border border-transparent transition-all text-slate-800 shadow-inner"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic alphabetically dropdown to start a new chat */}
+            {showAddContactDropdown && (
+              <div className="bg-slate-50 p-3 border-b border-slate-200 max-h-48 overflow-y-auto space-y-1.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Select a Member</span>
+                  <button onClick={() => setShowAddContactDropdown(false)} className="text-[10px] text-slate-400 hover:text-slate-800 font-bold">✕</button>
+                </div>
+                {allAvailableMembers
+                  .filter(m => m.id !== myId && m.memberName.toLowerCase().includes(dmSearchText.toLowerCase()))
+                  .sort((a, b) => a.memberName.localeCompare(b.memberName))
+                  .map(member => (
+                    <div
+                      key={member.id}
+                      onClick={() => handleAddOrOpenChat(member)}
+                      className="flex items-center gap-2.5 p-2 bg-white hover:bg-blue-50 border border-slate-200/60 rounded-xl cursor-pointer transition-colors"
+                    >
+                      <img src={member.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-slate-800 truncate">{member.memberName}</h4>
+                      </div>
+                      <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded-full uppercase">Chat</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Chats list scrolling viewport */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
+              {dmChats
+                .filter(c => c.memberName.toLowerCase().includes(dmSearchText.toLowerCase()))
+                .map((chat) => {
+                  const isActive = activeDMMember === chat.id;
+                  const lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length - 1] : null;
+                  
+                  const lastRead = lastReadTimestamps[chat.id] || 0;
+                  const chatMsgs = chat.messages || [];
+                  const unreadInChat = chatMsgs.filter((m: any) => {
+                    if (m.sender === 'me' || m.senderId === myId) return false;
+                    const msgTs = m.timestamp || 0;
+                    return msgTs > lastRead;
+                  }).length;
+                  
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => {
+                        setActiveDMMember(chat.id);
+                        onToast(`Opened direct message conversation with ${chat.memberName}`);
+                      }}
+                      className={`p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-all cursor-pointer rounded-xl mx-1.5 my-1 border ${
+                        isActive 
+                          ? 'bg-blue-50/50 border-blue-200/60 shadow-sm' 
+                          : chat.id === 'saved_messages' 
+                            ? 'bg-indigo-50/20 border-indigo-100/30' 
+                            : 'border-slate-100/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative shrink-0">
+                          <img 
+                            src={chat.avatarUrl} 
+                            alt={chat.memberName} 
+                            className="w-10 h-10 rounded-full border border-slate-200 object-cover" 
+                          />
+                          {chat.online && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs animate-pulse"></span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h5 className={`text-xs font-bold truncate ${unreadInChat > 0 && !isActive ? 'text-slate-900 font-extrabold' : 'text-slate-800'}`}>{chat.memberName}</h5>
+                            <span className="text-[9.5px] text-slate-400 font-semibold">{chat.username}</span>
+                          </div>
+                          <p className={`text-[10.5px] truncate mt-0.5 ${unreadInChat > 0 && !isActive ? 'text-slate-900 font-semibold' : 'text-slate-400 font-medium'}`}>
+                            {lastMsg ? (
+                              <span>
+                                <span className={`font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600' : 'text-slate-500'}`}>{lastMsg.sender === 'me' ? 'Me: ' : `${lastMsg.senderName || 'Member'}: `}</span>
+                                {lastMsg.text}
+                              </span>
+                            ) : (
+                              'No messages yet'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className={`text-[8px] font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600 font-black' : 'text-slate-400'}`}>
+                          {lastMsg ? lastMsg.time : ''}
+                        </span>
+                        {unreadInChat > 0 && !isActive ? (
+                          <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border border-white shadow-xs animate-bounce">
+                            {unreadInChat}
+                          </span>
+                        ) : chat.online ? (
+                          <span className="text-[8.5px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="text-[8.5px] font-bold text-slate-400 bg-slate-50 border border-slate-200/50 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                            Offline
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: Chat conversation room pane */}
+          <div className={`flex-1 bg-[#eae6df] bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:20px_20px] flex flex-col h-full relative ${!activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+            {activeDMMember ? (
+              (() => {
+                const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
+                const chatIdToUse = activeChat?.id || activeDMMember || '';
+                
+                return (
+                  <div className="flex-1 flex flex-col min-h-0 bg-[#f0f2f5] bg-[radial-gradient(#e2e8f0_1.2px,transparent_1.2px)] [background-size:16px_16px]">
+                    
+                    {/* Conversation Header */}
+                    <div className="bg-[#f0f2f5] text-slate-800 border-b border-slate-200 py-3 px-4 shadow-sm flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button 
+                          type="button"
+                          onClick={() => setActiveDMMember(null)}
+                          className="p-1.5 hover:bg-slate-200 rounded-full transition-all text-slate-700 shrink-0 cursor-pointer"
+                          title="Back to conversations list"
+                        >
+                          <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="relative shrink-0">
+                          <img 
+                            src={activeChat?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeDMMember || 'User')}`} 
+                            alt={activeChat?.memberName || activeDMMember || ''} 
+                            className="w-10 h-10 rounded-full object-cover border border-slate-300 shadow-xs" 
+                          />
+                          {activeChat?.online && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex flex-col">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-slate-800">{activeChat?.memberName || activeDMMember}</h4>
+                            {activeChat?.username && <span className="text-[10px] text-slate-400 font-semibold">{activeChat.username}</span>}
+                          </div>
+                          <span className="text-[10px] text-blue-600 font-extrabold tracking-wide uppercase">
+                            {activeChat?.typing ? (
+                              <span className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></span>
+                                typing...
+                              </span>
+                            ) : activeChat?.statusText || (activeChat?.online ? 'ONLINE' : 'OFFLINE (LAST SEEN RECENTLY)')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chat Messages Body (WhatsApp-style bubbles on right/left) */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col no-scrollbar">
+                      {(rtdbMessages.length > 0 ? rtdbMessages : activeChat?.messages || []).map((m: any) => {
+                        const isMe = m.sender === 'me';
+                        
+                        return (
+                          <div 
+                            key={m.id}
+                            onDoubleClick={() => handleToggleHeart(chatIdToUse, m.id)}
+                            className={`flex items-end gap-2.5 max-w-[85%] relative transition-all duration-200 select-none ${
+                              isMe ? 'self-end flex-row-reverse' : 'self-start flex-row'
+                            }`}
+                          >
+                            {/* Sender avatar only for other members */}
+                            {!isMe && (
+                              <img 
+                                src={m.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.senderName || 'Member')}&background=64748B&color=fff`} 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-xs shrink-0" 
+                                alt="" 
+                              />
+                            )}
+
+                            {/* Message bubble itself */}
+                            <div 
+                              className={`relative px-4 py-2.5 text-[12.5px] font-semibold leading-relaxed transition-all duration-200 select-none cursor-pointer group shadow-xs ${
+                                isMe 
+                                  ? 'bg-[#EFF6FF] text-slate-800 rounded-2xl rounded-tr-none border border-[#DBEAFE]' 
+                                  : 'bg-white text-slate-800 rounded-2xl rounded-tl-none border border-slate-200/60'
+                              }`}
+                              title="Double-tap to heart message!"
+                            >
+                              {/* Floating Micro reactions selector on hover */}
+                              <div className={`absolute -top-7 ${isMe ? 'right-0' : 'left-0'} hidden group-hover:flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-full shadow-lg z-10 animate-fade-in`}>
+                                {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
+                                  <button 
+                                    key={emoji}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddReaction(chatIdToUse, m.id, emoji);
+                                    }}
+                                    className="hover:scale-125 transition-transform p-0.5 text-xs"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Identified by sender inside threads */}
+                              {!isMe && (
+                                <div className="text-[10px] font-extrabold text-blue-600 mb-1 tracking-tight">
+                                  {m.senderName || 'Member'}
+                                </div>
+                              )}
+
+                              {/* Content */}
+                              <p className="whitespace-pre-wrap">{renderWithMentions(m.text, onToast)}</p>
+                              
+                              {/* Reaction Badges */}
+                              {m.reactions && m.reactions.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {m.reactions.map((emoji, idx) => (
+                                    <span key={idx} className="bg-slate-50 text-[10px] px-1.5 py-0.5 rounded-full shadow-xs border border-slate-150 text-slate-800 flex items-center justify-center">
+                                      {emoji}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Heart Overlay */}
+                              {m.hearted && (
+                                <div className={`absolute -bottom-2.5 ${isMe ? '-left-2' : '-right-2'} bg-white border border-rose-100 rounded-full p-1 shadow-xs animate-pulse flex items-center justify-center`}>
+                                  <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+                                </div>
+                              )}
+
+                              {/* Footer Timestamp & Checkmarks */}
+                              <div className="flex items-center justify-end gap-1 mt-1 text-[8.5px] font-bold text-slate-400">
+                                <span className="text-slate-450">{m.time}</span>
+                                {isMe && (
+                                  <span className="text-sky-500 font-extrabold inline">✓✓</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Chat Input Bar */}
+                    <form 
+                      onSubmit={handleSendDM}
+                      className="p-3 border-t border-slate-200 bg-[#f0f2f5] flex items-center gap-2 shrink-0"
+                    >
+                      <input
+                        type="text"
+                        required
+                        placeholder="Type a message... (use @ to mention)"
+                        value={activeDMInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setActiveDMInput(val);
+                          checkMentionTrigger(val, 'dm');
+                        }}
+                        className="flex-1 bg-white border border-slate-200 focus:border-slate-300 rounded-lg px-4 py-2 text-xs font-semibold focus:outline-none text-slate-900 transition-all shadow-inner"
+                      />
+
+                      <button 
+                        type="submit"
+                        className="p-2.5 rounded-full text-white bg-blue-600 hover:bg-blue-750 active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer shrink-0"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </form>
+                  </div>
+                );
+              })()
+            ) : (
+              /* EMPTY WELCOME SCREEN */
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#f8f9fa]">
+                <div className="w-20 h-20 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-md">
+                  <MessageSquare className="w-10 h-10" />
+                </div>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">AdvocoDe Messenger</h3>
+                
+                <div className="mt-6 flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/20 px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                   </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* DETAILED STUDENT BIO MODAL overlay */}
       {bioProfile && (
@@ -1969,308 +2477,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           onToast={onToast}
         />
       )}
-
-      {/* BACKDROP FOR SOCIAL CHAT OVERLAY */}
-      {isDMWidgetExpanded && (
-        <div 
-          onClick={() => setIsDMWidgetExpanded(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity duration-300"
-        />
-      )}
-
-      {/* HIGH-FIDELITY DEDICATED SOCIAL MESSAGING PANEL OVERLAY */}
-      <div 
-        id="dm-social-panel"
-        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
-          isDMWidgetExpanded ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        {/* Dynamic Social-themed Header / Inbox Selector */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
-          {activeDMMember ? (
-            /* ACTIVE CONVERSATION FLOW (Custom themed based on dmSocialStyle) */
-            (() => {
-              const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
-              const chatIdToUse = activeChat?.id || activeDMMember || '';
-              
-              // OmniChat Combo Theme styling: Deep slate and subtle neon hues
-              const headerStyles = 'bg-slate-950 text-white border-b border-slate-800 py-3.5 px-4 shadow-md';
-              const chatBg = 'bg-[#f4f7f9] bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:20px_20px]';
-
-              return (
-                <div className={`flex-1 flex flex-col min-h-0 ${chatBg}`}>
-                  {/* Styled Header */}
-                  <div className={`flex items-center justify-between shrink-0 ${headerStyles}`}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <button 
-                        onClick={() => setActiveDMMember(null)}
-                        className="p-1.5 hover:bg-white/10 rounded-full transition-all text-white shrink-0 cursor-pointer"
-                        title="Back to conversations list"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="relative shrink-0">
-                        <img 
-                          src={activeChat?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeDMMember || 'User')}`} 
-                          alt={activeChat?.memberName || activeDMMember || ''} 
-                          className="w-9 h-9 rounded-full object-cover border border-white/25 shadow-md" 
-                        />
-                        {activeChat?.online && (
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-950 animate-pulse"></span>
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex flex-col">
-                        <div className="flex items-center gap-1">
-                          <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-white">{activeChat?.memberName || activeDMMember}</h4>
-                          {activeChat?.username && <span className="text-[9px] text-slate-400 font-medium">{activeChat.username}</span>}
-                        </div>
-                        <span className="text-[10px] text-blue-400 font-extrabold tracking-wide uppercase">
-                          {activeChat?.typing ? (
-                            <span className="flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
-                              typing...
-                            </span>
-                          ) : activeChat?.statusText || (activeChat?.online ? 'ONLINE' : 'OFFLINE (LAST SEEN RECENTLY)')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Conversation Body (Scrollable messages) */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar">
-                    {(rtdbMessages.length > 0 ? rtdbMessages : activeChat?.messages || []).map((m: any) => {
-                      const isMe = m.sender === 'me';
-                      
-                      // Theme-based bubble styles: Blue for me, White for them
-                      const bubbleStyle = isMe 
-                        ? 'bg-blue-600 text-white self-end rounded-2xl rounded-tr-none shadow-sm shadow-blue-500/10' 
-                        : 'bg-white border border-slate-200 text-slate-800 self-start rounded-2xl rounded-tl-none shadow-sm';
-
-                      return (
-                        <div 
-                          key={m.id}
-                          onDoubleClick={() => handleToggleHeart(chatIdToUse, m.id)}
-                          className={`max-w-[85%] relative px-4 py-2.5 text-[12px] font-semibold leading-relaxed transition-all duration-200 select-none cursor-pointer group ${bubbleStyle}`}
-                          title="Double-tap to heart message!"
-                        >
-                          {/* Floating Micro reaction selector on hover */}
-                          <div className={`absolute -top-7 ${isMe ? 'right-0' : 'left-0'} hidden group-hover:flex items-center gap-1 bg-white border border-slate-200/80 p-1 rounded-full shadow-lg z-10 animate-fade-in`}>
-                            {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
-                              <button 
-                                key={emoji}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddReaction(chatIdToUse, m.id, emoji);
-                                }}
-                                className="hover:scale-125 transition-transform p-0.5"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-
-                          {activeDMMember === 'community_chat' && !isMe && (
-                            <div className="flex items-center gap-1.5 mb-1 pb-1 border-b border-slate-100">
-                              {m.senderAvatar && <img src={m.senderAvatar} className="w-3.5 h-3.5 rounded-full object-cover" alt="" />}
-                              <span className="text-[10px] font-extrabold text-blue-600">{m.senderName || 'Member'}</span>
-                            </div>
-                          )}
-
-                          <p>{renderWithMentions(m.text, onToast)}</p>
-                          
-                          {/* Active reaction badges row if any */}
-                          {m.reactions && m.reactions.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {m.reactions.map((emoji, idx) => (
-                                <span key={idx} className="bg-slate-100/95 text-[10px] px-1.5 py-0.5 rounded-full shadow-xs border border-slate-200/30 text-slate-800 flex items-center justify-center">
-                                  {emoji}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Double-tapped Heart overlay */}
-                          {m.hearted && (
-                            <div className={`absolute -bottom-2 ${isMe ? '-left-2' : '-right-2'} bg-white border border-rose-100 rounded-full p-1 shadow-md animate-pulse flex items-center justify-center`}>
-                              <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-end gap-1 mt-1 text-[8.5px] font-bold text-slate-400">
-                            <span className={isMe ? 'text-white/70' : 'text-slate-400'}>{m.time}</span>
-                            {isMe && (
-                              <CheckCheck className="w-3.5 h-3.5 text-sky-400 inline shrink-0" />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Typing status indicator */}
-                    {activeChat?.typing && (
-                      <div className="bg-white/90 border border-slate-200/50 text-slate-500 self-start rounded-2xl rounded-bl-xs px-3.5 py-2 text-[10.5px] font-black tracking-wide italic animate-pulse shadow-xs flex items-center gap-1.5">
-                        <span className="flex gap-1">
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                        </span>
-                        {activeDMMember} is typing...
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Input form - clean text input and send button with no attachments */}
-                  <form 
-                    onSubmit={handleSendDM}
-                    className="p-3 border-t border-slate-200/50 bg-white flex items-center gap-2 shrink-0 shadow-lg"
-                  >
-                    <input
-                      type="text"
-                      required
-                      placeholder="Type a message... (use @ to mention)"
-                      value={activeDMInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setActiveDMInput(val);
-                        checkMentionTrigger(val, 'dm');
-                      }}
-                      className="flex-1 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-slate-300 rounded-full px-4 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-900 transition-all shadow-inner"
-                    />
-
-                    <button 
-                      type="submit"
-                      className="p-2 rounded-full text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all shadow flex items-center justify-center cursor-pointer shrink-0"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </form>
-                </div>
-              );
-            })()
-          ) : (
-            /* DUAL-PANE CONTACT LIST SELECTOR SCREEN */
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
-              {/* Inbox Header */}
-              <div className="p-4 bg-slate-950 text-white border-b border-slate-800 shrink-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-xs sm:text-sm tracking-widest uppercase">
-                    CHAT
-                  </h3>
-                  <button 
-                    onClick={() => setIsDMWidgetExpanded(false)}
-                    className="p-1.5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-all cursor-pointer"
-                    title="Close DM Panel"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Scrollable Conversations List */}
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 no-scrollbar p-1">
-                {dmChats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    onClick={() => {
-                      setActiveDMMember(chat.id);
-                      onToast(`Opened direct message conversation with ${chat.memberName}`);
-                    }}
-                    className={`p-3 flex items-center justify-between gap-3 hover:bg-white transition-colors cursor-pointer rounded-xl mx-1 my-1 border ${chat.id === 'saved_messages' ? 'bg-indigo-50/40 border-indigo-100/50' : 'border-slate-100'}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative shrink-0">
-                        <img 
-                          src={chat.avatarUrl} 
-                          alt={chat.memberName} 
-                          className="w-10 h-10 rounded-full border border-slate-200 object-cover" 
-                        />
-                        {chat.online && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-xs animate-pulse"></span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <h5 className="text-xs font-bold text-slate-800 truncate">{chat.memberName}</h5>
-                          <span className="text-[9.5px] text-slate-400 font-semibold">{chat.username}</span>
-                          {chat.id === 'saved_messages' && (
-                            <span className="bg-indigo-100 text-indigo-700 text-[8px] font-black uppercase px-1.5 py-0.5 rounded">Saved</span>
-                          )}
-                        </div>
-                        <p className="text-[10.5px] text-slate-400 font-medium truncate mt-0.5">
-                          {chat.messages.length > 0 ? chat.messages[chat.messages.length - 1].text : 'No messages yet'}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      {chat.online ? (
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          {chat.statusText || 'ONLINE'}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-medium text-slate-400 bg-slate-100 border border-slate-250 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          {chat.statusText || 'OFFLINE'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Floating + button to select anyone in the forum arranged alphabetically */}
-              <div className="absolute bottom-6 right-6 z-30">
-                <button
-                  type="button"
-                  onClick={() => setShowAddContactDropdown(!showAddContactDropdown)}
-                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
-                  title="Select member to chat"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-
-                {showAddContactDropdown && (
-                  <div className="absolute bottom-14 right-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-45 animate-scale-in">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Select Club Member</span>
-                      <button 
-                        onClick={() => setShowAddContactDropdown(false)}
-                        className="text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="space-y-1 max-h-48 overflow-y-auto no-scrollbar">
-                      {allAvailableMembers.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((member) => (
-                        <button
-                          key={member.id || member.name}
-                          onClick={() => handleAddOrOpenChat(member)}
-                          className="w-full text-left p-2 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer"
-                        >
-                          <img 
-                            src={member.avatarUrl} 
-                            alt={member.name} 
-                            className="w-7 h-7 rounded-full object-cover border border-slate-150" 
-                          />
-                          <div className="min-w-0">
-                            <h6 className="text-xs font-bold text-slate-800 truncate">{member.name}</h6>
-                            <p className="text-[9px] text-slate-400 font-medium truncate">
-                              {member.username} • {member.statusText || (member.online ? 'Online' : 'Offline')}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
-        </div>
-      </div>
 
     </div>
   );
