@@ -742,7 +742,7 @@ export default function App() {
             )}
 
             {/* Active Content Screens */}
-            <div className={`flex-1 relative no-scrollbar ${currentView === 'editor' ? 'h-full flex flex-col overflow-hidden pb-16 md:pb-0' : 'overflow-y-auto pb-24 md:pb-6'}`}>
+            <div className={`flex-1 relative no-scrollbar ${currentView === 'editor' || currentView === 'chat' ? 'h-full flex flex-col overflow-hidden pb-16 md:pb-0' : 'overflow-y-auto pb-24 md:pb-6'}`}>
 
               {(currentView === 'library' || currentView === 'tutorials') && (
                 <LibraryView

@@ -100,12 +100,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [downloading, setDownloading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [localQrUrl, setLocalQrUrl] = useState<string>('');
+  const [vcardQrUrl, setVcardQrUrl] = useState<string>('');
+  const [qrType, setQrType] = useState<'link' | 'vcard'>('link');
 
   useEffect(() => {
-    const generateQr = async () => {
+    const generateQrs = async () => {
       try {
         const shareUrl = `${window.location.origin}?profile=${user.uid}`;
-        const dataUrl = await QRCode.toDataURL(shareUrl, {
+        const linkCode = await QRCode.toDataURL(shareUrl, {
           margin: 1,
           width: 256,
           color: {
@@ -113,13 +115,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             light: '#ffffff'
           }
         });
-        setLocalQrUrl(dataUrl);
+        setLocalQrUrl(linkCode);
+
+        const vcardData = `BEGIN:VCARD\nVERSION:3.0\nFN:${user.name}\nORG:AdvocoDe Workspace Hub\nTITLE:${user.role || 'Member'} (Level ${user.level || 1})\nEMAIL;TYPE=PREF,INTERNET:${user.email || ''}\nNOTE:AdvocoDe Profile. Level: ${user.level || 1}. XP: ${user.xp || 50}. Streak: ${user.streak || 0} days. Skills: ${user.skills ? user.skills.join(', ') : ''}\nURL:${window.location.origin}?profile=${user.uid}\nEND:VCARD`;
+        const vcardCode = await QRCode.toDataURL(vcardData, {
+          margin: 1,
+          width: 256,
+          color: {
+            dark: '#0f172a',
+            light: '#ffffff'
+          }
+        });
+        setVcardQrUrl(vcardCode);
       } catch (err) {
-        console.error('Failed to generate local QR Code:', err);
+        console.error('Failed to generate local QR Codes:', err);
       }
     };
-    generateQr();
-  }, [user.uid]);
+    generateQrs();
+  }, [user.uid, user.name, user.role, user.level, user.xp, user.streak, user.skills, user.email]);
 
   const downloadBadge = async () => {
     try {
@@ -446,7 +459,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className="space-y-8 px-6 md:px-8 pt-6 pb-24 max-w-3xl mx-auto animate-fade-in">
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 animate-fade-in text-slate-800 dark:text-slate-100">
       <input
         type="file"
         id="profile-avatar-upload"
@@ -462,11 +475,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         onChange={handleCoverFileChange}
       />
       
-      {/* Profile Header Card */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-10 mb-8 relative overflow-hidden">
+      {/* Profile Header Full-Width Card */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 relative overflow-hidden w-full">
         {/* LinkedIn style Cover Photo Banner */}
         <div 
-          className="absolute top-0 left-0 w-full h-44 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 overflow-hidden group cursor-pointer"
+          className="w-full h-48 md:h-60 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 overflow-hidden group cursor-pointer relative"
           onClick={() => document.getElementById('profile-cover-upload')?.click()}
           title="Click to change cover photo"
         >
@@ -478,165 +491,373 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
           <div className="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-all border border-white/10 shadow-sm">
             {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-            <span>{uploadingCover ? 'Uploading...' : 'Edit Cover Photo'}</span>
+            <span>{uploadingCover ? 'Uploading...' : 'Edit Cover'}</span>
           </div>
         </div>
         
-        <div className="relative flex flex-col md:flex-row items-center md:items-end gap-6 mt-20 md:mt-24">
-          <div className="relative group cursor-pointer" onClick={() => document.getElementById('profile-avatar-upload')?.click()}>
-            <img
-              src={
-                customAvatarUrl || user.avatarUrl ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563EB&color=fff&size=150`
-              }
-              alt="Profile"
-              className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-white shadow-md transition-transform duration-300 group-hover:scale-102 object-cover"
-            />
-            {uploadingAvatar && (
-              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setIsEditOpen(true); }}
-              className="absolute bottom-1 right-1 bg-blue-600 hover:bg-blue-700 p-2.5 rounded-full text-white shadow-lg transition-all border-2 border-white cursor-pointer active:scale-90"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 relative">
+          <div className="relative flex flex-col md:flex-row items-center md:items-end gap-6 -mt-16 md:-mt-20">
+            <div className="relative group cursor-pointer shrink-0" onClick={() => document.getElementById('profile-avatar-upload')?.click()}>
+              <img
+                src={
+                  customAvatarUrl || user.avatarUrl ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563EB&color=fff&size=150`
+                }
+                alt="Profile"
+                className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-slate-900 shadow-md transition-transform duration-300 group-hover:scale-102 object-cover bg-white"
+              />
+              {uploadingAvatar && (
+                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsEditOpen(true); }}
+                className="absolute bottom-1 right-1 bg-blue-600 hover:bg-blue-700 p-2.5 rounded-full text-white shadow-lg transition-all border-2 border-white dark:border-slate-900 cursor-pointer active:scale-90"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
 
-          <div className="text-center md:text-left flex-1 min-w-0">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight truncate">
-              {user.name}
-            </h2>
-            <p className="text-sm text-slate-500 font-semibold mt-1">
-              {user.bio}
-            </p>
-            <p className="text-xs text-blue-600 mt-1 font-mono font-bold">
-              {user.username || user.regNumber || '@developer'}
-            </p>
-            
-            {/* Skills Badges */}
-            <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
-              {user.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold tracking-wider uppercase px-3 py-1 rounded-full shadow-inner"
-                >
-                  {skill}
+            <div className="text-center md:text-left flex-1 min-w-0 md:mb-2">
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 justify-center md:justify-start">
+                <h2 className="text-2xl md:text-3.5xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+                  {user.name}
+                </h2>
+                <div className="flex items-center gap-1.5 justify-center">
+                  <span className="bg-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs tracking-wider uppercase">
+                    Level {user.level || 1}
+                  </span>
+                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9.5px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-500" strokeWidth={3} /> Verified Member
+                  </span>
+                </div>
+              </div>
+              
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mt-1 max-w-2xl">
+                {user.bio}
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1.5 mt-2 text-xs font-mono font-bold text-slate-400 dark:text-slate-500">
+                <span className="text-blue-600 dark:text-blue-400">
+                  {user.username || user.regNumber || '@developer'}
                 </span>
-              ))}
+                <span>•</span>
+                <span>Streak: {user.streak || 1} Days 🔥</span>
+                <span>•</span>
+                <span>Total: {user.xp || 50} XP ⭐</span>
+              </div>
+              
+              {/* Skills Badges */}
+              <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-4">
+                {user.skills.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-900/50 text-[9.5px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-md shadow-inner"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Settings Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Account Settings Section */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">
-            Account Settings
-          </h3>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
-            <div
-              onClick={() => {
-                setIsEditOpen(true);
-                // Sync states
-                setName(user.name);
-                setBio(user.bio);
-                setUsername(user.username || user.regNumber || '@developer');
-                setSkillsString(user.skills.join(', '));
-              }}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                <UserIcon className="w-5 h-5" />
+      {/* Profile Columns Dashboard */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEFT/CENTER COLUMN: Settings and Links (Span 2) */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Settings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Account Settings Section */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5" /> Account Settings
+                </h3>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  <div
+                    onClick={() => {
+                      setIsEditOpen(true);
+                      setName(user.name);
+                      setBio(user.bio);
+                      setUsername(user.username || user.regNumber || '@developer');
+                      setSkillsString(user.skills.join(', '));
+                    }}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                      <UserIcon className="w-5 h-5" />
+                    </div>
+                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Edit Profile Details</span>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                  </div>
+
+                  <div
+                    onClick={toggleDarkMode}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                      {currentIsDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                    </div>
+                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Dark Theme Toggle</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
+                      {currentIsDark ? 'Dark' : 'Light'}
+                    </span>
+                  </div>
+
+                  <div
+                    onClick={() => setIsNotifModalOpen(true)}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Notifications Setup</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase border border-blue-100/50 dark:border-blue-900/30">
+                      Configure
+                    </span>
+                  </div>
+
+                  <div
+                    onClick={() => onToast('Security preferences configured')}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Privacy & Security</span>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                  </div>
+                </div>
               </div>
-              <span className="flex-1 text-sm font-bold text-slate-900">Edit Profile</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+
+              {/* Club Integrations & Pass */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
+                  <Github className="w-3.5 h-3.5" /> Club Connections
+                </h3>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  <div
+                    onClick={() => onToast('Your GitHub profile is synchronized with AdvocoDe organization!')}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                      <Github className="w-5 h-5" />
+                    </div>
+                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Link GitHub organization</span>
+                    <span className="text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-850/40 uppercase tracking-wider">
+                      Connected
+                    </span>
+                  </div>
+
+                  <div
+                    onClick={() => setIsQrOpen(true)}
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-150 dark:border-blue-900/30 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 shadow-xs">
+                      <QrCode className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-sm font-bold text-slate-900 dark:text-slate-200 truncate">Verification Passport</span>
+                      <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">Share or download your verified member credential</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            <div
-              onClick={toggleDarkMode}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                {currentIsDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
-              </div>
-              <span className="flex-1 text-sm font-bold text-slate-900">Dark Theme Toggle</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase">
-                {currentIsDark ? 'Dark' : 'Light'}
-              </span>
+            {/* Logout Row */}
+            <div className="pt-2">
+              <button
+                onClick={onSignOut}
+                className="w-full md:w-auto md:px-12 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 font-bold py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/40 transition-all flex justify-center items-center gap-2 cursor-pointer active:scale-98 text-sm"
+              >
+                <LogOut className="w-5 h-5" /> Sign Out from Account
+              </button>
             </div>
-
-            <div
-              onClick={() => setIsNotifModalOpen(true)}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                <Bell className="w-5 h-5" />
-              </div>
-              <span className="flex-1 text-sm font-bold text-slate-900">Notifications</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 uppercase">
-                Configure
-              </span>
-            </div>
-
-            <div
-              onClick={() => onToast('Security preferences configured')}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                <Lock className="w-5 h-5" />
-              </div>
-              <span className="flex-1 text-sm font-bold text-slate-900">Privacy & Security</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
-            </div>
+            
           </div>
-        </div>
 
-        {/* Club Integrations & Pass */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">
-            Club Integrations
-          </h3>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 divide-y divide-slate-100">
-            <div
-              onClick={() => onToast('Your GitHub profile is synchronized with AdvocoDe organization!')}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                <Github className="w-5 h-5" />
+          {/* RIGHT COLUMN: Achievements & XP Progress Hub (Span 1) */}
+          <div className="space-y-8">
+            
+            {/* XP PROGRESS CARD */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-500" /> XP Progression
+                </h3>
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-md">
+                  RANK: {
+                    (user.level || 1) >= 5 ? 'Master Architect' :
+                    (user.level || 1) >= 3 ? 'Systems Analyst' : 'Code Cadet'
+                  }
+                </span>
               </div>
-              <span className="flex-1 text-sm font-bold text-slate-900">Link GitHub</span>
-              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md border border-emerald-200 uppercase tracking-wider">
-                Connected
-              </span>
+              
+              {/* Massive Level Badge */}
+              <div className="bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-4.5 border border-slate-150 dark:border-slate-855 text-center flex flex-col items-center">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">Current Standing</span>
+                <span className="text-4xl font-black text-slate-900 dark:text-white block tracking-tight">
+                  LEVEL {user.level || 1}
+                </span>
+                
+                {/* Level progression bar */}
+                <div className="w-full mt-4">
+                  <div className="flex justify-between text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 mb-1.5">
+                    <span>{user.xp || 50} XP Accumulation</span>
+                    <span>{((user.level || 1) * 100)} XP Goal</span>
+                  </div>
+                  <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-[1px]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-md transition-all duration-500 relative" 
+                      style={{ width: `${Math.min(Math.max(((user.xp || 50) % 100), 10), 100)}%` }}
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                    </div>
+                  </div>
+                  <span className="block text-[10px] text-slate-450 mt-2 font-semibold">
+                    {100 - ((user.xp || 50) % 100)} XP remaining to level up!
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats Counters */}
+              <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                <div className="bg-slate-50/50 dark:bg-slate-950/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <span className="block text-lg font-black text-slate-800 dark:text-slate-200">{(user.contributions || 0)}</span>
+                  <span className="text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mt-0.5">Posts</span>
+                </div>
+                <div className="bg-slate-50/50 dark:bg-slate-950/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <span className="block text-lg font-black text-slate-800 dark:text-slate-200">{(user.learningCount || 0)}</span>
+                  <span className="text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mt-0.5">Studies</span>
+                </div>
+                <div className="bg-slate-50/50 dark:bg-slate-950/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <span className="block text-lg font-black text-slate-800 dark:text-slate-200">{(user.engagementCount || 0)}</span>
+                  <span className="text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mt-0.5">Chats</span>
+                </div>
+              </div>
             </div>
 
-            <div
-              onClick={() => setIsQrOpen(true)}
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <div className="bg-blue-50 border border-blue-150 p-2.5 rounded-xl text-blue-600 shadow-xs">
-                <QrCode className="w-5 h-5" />
+            {/* ACHIEVEMENTS GRID CARD */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-emerald-500" /> Unlocked Badges
+                </h3>
+                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md">
+                  {
+                    [
+                      true,
+                      (user.contributions || 0) > 0,
+                      (user.engagementCount || 0) > 0,
+                      (user.learningCount || 0) > 0,
+                      (user.streak || 1) >= 3,
+                      (user.level || 1) >= 3
+                    ].filter(Boolean).length
+                  } / 6 Earned
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="block text-sm font-bold text-slate-900 truncate">Member Verification Badge</span>
-                <span className="block text-[10px] text-slate-400 font-semibold mt-0.5 truncate">Share or download your verified developer credential</span>
+
+              {/* Achievements Stack */}
+              <div className="space-y-3.5 max-h-[380px] overflow-y-auto no-scrollbar pr-1">
+                {[
+                  {
+                    title: 'First Check-In',
+                    desc: 'Registered profile and completed security setup',
+                    icon: '🎓',
+                    unlocked: true,
+                    color: 'from-blue-500/20 to-indigo-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400'
+                  },
+                  {
+                    title: 'Forum Contributor',
+                    desc: 'Published a programming snippet or notice',
+                    icon: '📢',
+                    unlocked: (user.contributions || 0) > 0,
+                    color: (user.contributions || 0) > 0 
+                      ? 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
+                      : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-40'
+                  },
+                  {
+                    title: 'Social Networker',
+                    desc: 'Interact on community channels or direct chats',
+                    icon: '💬',
+                    unlocked: (user.engagementCount || 0) > 0,
+                    color: (user.engagementCount || 0) > 0 
+                      ? 'from-amber-500/20 to-orange-500/20 border-amber-500/30 text-amber-600 dark:text-amber-450' 
+                      : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-40'
+                  },
+                  {
+                    title: 'Library Scholar',
+                    desc: 'Opened technical tutorials or student notes',
+                    icon: '🧠',
+                    unlocked: (user.learningCount || 0) > 0,
+                    color: (user.learningCount || 0) > 0 
+                      ? 'from-purple-500/20 to-pink-500/20 border-purple-500/30 text-purple-600 dark:text-purple-400' 
+                      : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-40'
+                  },
+                  {
+                    title: 'Streak Adept',
+                    desc: 'Maintained a 3+ day consecutive active streak',
+                    icon: '🔥',
+                    unlocked: (user.streak || 1) >= 3,
+                    color: (user.streak || 1) >= 3 
+                      ? 'from-rose-500/20 to-red-500/20 border-rose-500/30 text-rose-600 dark:text-rose-400' 
+                      : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-40'
+                  },
+                  {
+                    title: 'Systems Adept',
+                    desc: 'Advanced to Level 3 or higher',
+                    icon: '👑',
+                    unlocked: (user.level || 1) >= 3,
+                    color: (user.level || 1) >= 3 
+                      ? 'from-yellow-500/20 to-amber-500/20 border-yellow-500/30 text-yellow-600 dark:text-yellow-450' 
+                      : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-40'
+                  }
+                ].map((badge, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                      badge.unlocked 
+                        ? 'bg-gradient-to-r hover:scale-102 shadow-xs' 
+                        : 'text-slate-400 dark:text-slate-600'
+                    } ${badge.color}`}
+                  >
+                    <div className="text-2xl w-10 h-10 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-black/5 dark:border-white/5 flex items-center justify-center shrink-0">
+                      {badge.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-black truncate">{badge.title}</h4>
+                      <p className="text-[10px] opacity-80 leading-snug mt-0.5 line-clamp-1">{badge.desc}</p>
+                    </div>
+                    <div>
+                      {badge.unlocked ? (
+                        <span className="bg-emerald-500 text-white p-0.5 rounded-full block border border-white dark:border-slate-900 shadow-sm">
+                          <Check className="w-2.5 h-2.5" strokeWidth={4} />
+                        </span>
+                      ) : (
+                        <span className="text-[9.5px] font-black uppercase font-mono tracking-widest opacity-60">
+                          Locked
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
+
           </div>
-
-          <button
-            onClick={onSignOut}
-            className="w-full bg-white text-red-600 font-bold py-4 rounded-2xl shadow-sm border border-red-100 hover:bg-red-50 hover:border-red-200 transition-all flex justify-center items-center gap-2 cursor-pointer active:scale-98 text-sm"
-          >
-            <LogOut className="w-5 h-5" /> Sign Out
-          </button>
+          
         </div>
       </div>
 
@@ -655,6 +876,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className="text-slate-400 hover:text-slate-100 p-1.5 rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
               >
                 ✕
+              </button>
+            </div>
+
+            {/* Segmented Tab Swapper */}
+            <div className="px-5 pt-3 pb-1 bg-slate-900 border-b border-slate-850 flex gap-2">
+              <button
+                onClick={() => setQrType('link')}
+                className={`flex-1 text-center py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  qrType === 'link'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Web Profile
+              </button>
+              <button
+                onClick={() => setQrType('vcard')}
+                className={`flex-1 text-center py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  qrType === 'vcard'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                vCard Contact
               </button>
             </div>
 
@@ -704,7 +949,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {/* QR Code */}
                 <div className="z-10 bg-white p-2.5 rounded-xl border border-blue-500/40 my-3 shrink-0 shadow-lg relative group/qr">
                   <img
-                    src={localQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`${window.location.origin}?profile=${user.uid}`)}`}
+                    src={qrType === 'link' ? localQrUrl : vcardQrUrl}
                     alt="Verified QR Code"
                     className="w-24 h-24 select-none"
                   />
@@ -715,8 +960,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 {/* Bottom Watermark */}
                 <div className="z-10 mb-1">
-                  <span className="text-[7.5px] font-black text-emerald-500 tracking-wider font-mono block uppercase">● SECURE STUDENT RECORD</span>
-                  <span className="text-[6.5px] font-bold text-slate-500 tracking-widest block font-mono mt-0.5">SCAN TO AUDIT REAL-TIME STATS</span>
+                  <span className="text-[7.5px] font-black text-emerald-500 tracking-wider font-mono block uppercase">
+                    {qrType === 'link' ? '● SECURE HUB RECORD' : '● SCAN TO SAVE CONTACT'}
+                  </span>
+                  <span className="text-[6.5px] font-bold text-slate-500 tracking-widest block font-mono mt-0.5">
+                    {qrType === 'link' ? 'SCAN TO AUDIT REAL-TIME STATS' : 'DIRECT VCARD INTEGRATION'}
+                  </span>
                 </div>
               </div>
 

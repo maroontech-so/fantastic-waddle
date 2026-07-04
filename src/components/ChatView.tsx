@@ -37,13 +37,15 @@ import {
   Paperclip,
   CheckCheck,
   Loader2,
-  AtSign
+  AtSign,
+  CornerUpLeft,
+  Copy
 } from 'lucide-react';
 import { MemberBioModal, MemberProfile } from './MemberBioModal';
 import { db, auth, rtdb } from '../firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { cleanForFirestore } from '../utils/clean';
-import { ref, onValue, push, set, onDisconnect, serverTimestamp } from 'firebase/database';
+import { ref, onValue, push, set, update, onDisconnect, serverTimestamp } from 'firebase/database';
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
 
@@ -271,13 +273,75 @@ const EventCountdown: React.FC<{ targetDateStr?: string }> = ({ targetDateStr })
   const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
 
   return (
-    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border-2 border-amber-500/60 font-mono font-extrabold text-[11px] shadow-sm select-none shrink-0" title="Live Event Countdown Timer">
+    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border-2 border-amber-500/60 font-mono font-extrabold text-[11px] shadow-sm select-none shrink-0" title="Event Countdown Timer">
       <span className="animate-pulse text-amber-600">⏱️</span>
       <span className="uppercase text-[8.5px] text-amber-600 tracking-wider font-bold">Starts in:</span>
       <span className="text-slate-900 bg-amber-50 px-1 py-0.5 rounded font-extrabold text-[10.5px]">{days}d</span>
       <span className="text-slate-900 bg-amber-50 px-1 py-0.5 rounded font-extrabold text-[10.5px]">{hours}h</span>
       <span className="text-slate-900 bg-amber-50 px-1 py-0.5 rounded font-extrabold text-[10.5px]">{minutes}m</span>
       <span className="text-amber-950 bg-amber-200 px-1 py-0.5 rounded font-extrabold text-[10.5px] text-amber-900 animate-none">{seconds}s</span>
+    </div>
+  );
+};
+
+const EventProminentCountdown: React.FC<{ targetDateStr?: string }> = ({ targetDateStr }) => {
+  const getTargetTime = () => {
+    if (targetDateStr) {
+      const parsed = new Date(targetDateStr).getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+    const now = new Date();
+    const target = new Date();
+    target.setDate(now.getDate() + ((7 + 3 - now.getDay()) % 7 || 7));
+    target.setHours(14, 0, 0, 0);
+    return target.getTime();
+  };
+
+  const targetTime = getTargetTime();
+  const [timeLeft, setTimeLeft] = useState(targetTime - Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const remaining = targetTime - Date.now();
+      setTimeLeft(remaining);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [targetTime]);
+
+  if (timeLeft <= 0) {
+    return (
+      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-black animate-pulse">
+        🔴 EVENT LIVE / IN PROGRESS
+      </div>
+    );
+  }
+
+  const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+  return (
+    <div className="flex items-center gap-2 font-mono font-black text-xs text-slate-100">
+      <div className="flex flex-col items-center bg-slate-900/90 border border-slate-800 px-2.5 py-1.5 rounded-lg min-w-[42px]">
+        <span className="text-amber-400 text-xs sm:text-sm leading-none">{days}</span>
+        <span className="text-[7.5px] text-slate-400 uppercase tracking-widest font-extrabold mt-0.5">Days</span>
+      </div>
+      <span className="text-amber-500 text-xs sm:text-sm animate-pulse">:</span>
+      <div className="flex flex-col items-center bg-slate-900/90 border border-slate-800 px-2.5 py-1.5 rounded-lg min-w-[42px]">
+        <span className="text-slate-100 text-xs sm:text-sm leading-none">{hours}</span>
+        <span className="text-[7.5px] text-slate-400 uppercase tracking-widest font-extrabold mt-0.5">Hrs</span>
+      </div>
+      <span className="text-amber-500 text-xs sm:text-sm animate-pulse">:</span>
+      <div className="flex flex-col items-center bg-slate-900/90 border border-slate-800 px-2.5 py-1.5 rounded-lg min-w-[42px]">
+        <span className="text-slate-100 text-xs sm:text-sm leading-none">{minutes}</span>
+        <span className="text-[7.5px] text-slate-400 uppercase tracking-widest font-extrabold mt-0.5">Mins</span>
+      </div>
+      <span className="text-amber-500 text-xs sm:text-sm animate-pulse">:</span>
+      <div className="flex flex-col items-center bg-amber-500/20 border border-amber-500/40 px-2.5 py-1.5 rounded-lg min-w-[42px]">
+        <span className="text-amber-400 text-xs sm:text-sm leading-none">{seconds}</span>
+        <span className="text-[7.5px] text-amber-400/80 uppercase tracking-widest font-extrabold mt-0.5">Secs</span>
+      </div>
     </div>
   );
 };
@@ -535,8 +599,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [isDMWidgetExpanded, setIsDMWidgetExpanded] = useState(false);
   const [chatViewMode, setChatViewMode] = useState<'timeline' | 'messages'>('timeline');
   const lastKnownMsgIdsRef = useRef<Set<string>>(new Set());
+  const isInitialPostsLoaded = useRef(false);
+  const loadedPostIdsRef = useRef<Set<string>>(new Set());
+  const userCommentsCountRef = useRef<Record<string, number>>({});
+  const userUpvotesCountRef = useRef<Record<string, number>>({});
   const [dmSearchText, setDmSearchText] = useState('');
   const [activeDMInput, setActiveDMInput] = useState('');
+  const [replyingToMessage, setReplyingToMessage] = useState<any | null>(null);
+  const [swipedMessageId, setSwipedMessageId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const [activeContextMenu, setActiveContextMenu] = useState<{ messageId: string, x: number, y: number } | null>(null);
+
+  const touchHoldTimerRef = useRef<any>(null);
+  const mouseHoldTimerRef = useRef<any>(null);
+  const lastTouchTap = useRef<number>(0);
+  const touchStartCoords = useRef<{ x: number, y: number } | null>(null);
   const [showAddContactDropdown, setShowAddContactDropdown] = useState(false);
   const [followedUsers, setFollowedUsers] = useState<Record<string, boolean>>({});
   const [promptIndex, setPromptIndex] = useState(() => Math.floor(Math.random() * DYNAMIC_POST_PROMPTS.length));
@@ -711,7 +788,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       Object.entries(allVal).forEach(([roomKey, roomData]: [string, any]) => {
         if (!roomData || typeof roomData !== 'object') return;
         const msgList = Object.entries(roomData).map(([k, v]: [string, any]) => {
-          const isMe = (v.senderId === myId || v.senderName === currentUser?.name || v.sender === 'me');
+          const isMe = v.senderId ? (v.senderId === myId) : (v.sender === 'me' || v.senderName === currentUser?.name);
           
           // Track for working live notification channel
           if (k && typeof k === 'string') {
@@ -906,6 +983,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return allRtdbChats.direct[activeChat?.id || getUserRtdbKey(activeDMMember)] || allRtdbChats.direct[`name_${(activeDMMember || '').toLowerCase()}`] || activeChat?.messages || [];
   }, [activeDMMember, allRtdbChats, dmChats]);
 
+  // Mark incoming messages as read when active chat is open
+  useEffect(() => {
+    if (chatViewMode === 'messages' && activeDMMember && rtdbMessages && rtdbMessages.length > 0) {
+      const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
+      const chatIdToUse = activeChat?.id || activeDMMember || '';
+      const roomKey = getRtdbRoomKey(chatIdToUse);
+
+      rtdbMessages.forEach((m: any) => {
+        if (m.sender === 'them' && m.status !== 'read') {
+          const msgStatusRef = ref(rtdb, `chats/${roomKey}/${m.id}/status`);
+          set(msgStatusRef, 'read').catch(() => {});
+        }
+      });
+    }
+  }, [chatViewMode, activeDMMember, rtdbMessages, dmChats, myId]);
+
   const handleSendDM = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeDMInput.trim() || !activeDMMember) return;
@@ -914,6 +1007,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setActiveDMInput('');
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const nowTs = Date.now();
+
+    const replyContext = replyingToMessage ? {
+      senderName: replyingToMessage.senderName || 'Member',
+      text: replyingToMessage.text,
+      id: replyingToMessage.id
+    } : null;
+
+    setReplyingToMessage(null);
 
     if (activeDMMember === 'community_chat') {
       push(ref(rtdb, `chats/community_chat`), {
@@ -925,7 +1026,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         time: nowTime,
         timestamp: nowTs,
         hearted: false,
-        reactions: []
+        reactions: [],
+        status: 'read',
+        replyTo: replyContext
       });
       if (onRewardXP) onRewardXP(5, 'engagement', 'Posting in Community Chat');
       return;
@@ -940,7 +1043,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         time: nowTime,
         timestamp: nowTs,
         hearted: false,
-        reactions: []
+        reactions: [],
+        status: 'read',
+        replyTo: replyContext
       });
       return;
     }
@@ -950,7 +1055,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const targetName = activeChat ? activeChat.memberName : activeDMMember;
     const chatId = [myId, targetId].sort().join('___');
 
-    push(ref(rtdb, `chats/${chatId}`), {
+    const newMsgRef = push(ref(rtdb, `chats/${chatId}`), {
       sender: 'me',
       senderId: myId,
       senderName: currentUser?.name || auth.currentUser?.displayName || 'Me',
@@ -961,8 +1066,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
       time: nowTime,
       timestamp: nowTs,
       hearted: false,
-      reactions: []
+      reactions: [],
+      status: 'sent',
+      replyTo: replyContext
     });
+
+    const msgKey = newMsgRef.key;
+    if (msgKey) {
+      setTimeout(() => {
+        const statusRef = ref(rtdb, `chats/${chatId}/${msgKey}/status`);
+        set(statusRef, 'delivered').catch(() => {});
+        
+        setTimeout(() => {
+          set(statusRef, 'read').catch(() => {});
+        }, 1500);
+      }, 800);
+    }
 
     if (onRewardXP) {
       onRewardXP(5, 'engagement', 'Sending a Direct Message');
@@ -998,25 +1117,42 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleAddReaction = (chatId: string, messageId: string, emoji: string) => {
     const roomKey = getRtdbRoomKey(chatId);
-    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}/reactions`);
+    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}`);
     const legacyRoomKey = [myId, chatId].sort().join('_');
-    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}/reactions`);
+    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}`);
 
     const currentMsg = rtdbMessages.find(m => m.id === messageId);
-    const currentReactions: string[] = currentMsg?.reactions || [];
-    const hasReaction = currentReactions.includes(emoji);
-    const nextReactions = hasReaction
-      ? currentReactions.filter(r => r !== emoji)
-      : [...currentReactions, emoji];
+    if (!currentMsg) return;
 
-    set(msgRef, nextReactions).catch(() => {});
-    if (roomKey !== legacyRoomKey) {
-      set(legacyRef, nextReactions).catch(() => {});
+    const currentReactionUsers = currentMsg.reactionUsers || {};
+    const existingEmoji = currentReactionUsers[myId];
+
+    const nextReactionUsers = { ...currentReactionUsers };
+    if (existingEmoji === emoji) {
+      delete nextReactionUsers[myId];
+    } else {
+      nextReactionUsers[myId] = emoji;
     }
 
-    if (!hasReaction) {
+    const nextReactions = Array.from(new Set(Object.values(nextReactionUsers))) as string[];
+
+    update(msgRef, {
+      reactionUsers: nextReactionUsers,
+      reactions: nextReactions
+    }).catch(() => {});
+
+    if (roomKey !== legacyRoomKey) {
+      update(legacyRef, {
+        reactionUsers: nextReactionUsers,
+        reactions: nextReactions
+      }).catch(() => {});
+    }
+
+    if (existingEmoji !== emoji) {
       onToast(`Reacted with ${emoji}! +5 XP`);
       if (onRewardXP) onRewardXP(5, 'engagement', `Reacting with ${emoji}`);
+    } else {
+      onToast(`Removed reaction`);
     }
   };
   // Keyboard navigation reference
@@ -1052,10 +1188,63 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const postsQuery = query(collection(db, "posts"), orderBy("timeMs", "desc"));
     const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
       const loadedPosts: EngagementPost[] = [];
+      let newPostDetected: EngagementPost | null = null;
+      
+      const storedUser = sessionStorage.getItem('advocode_user');
+      const myName = storedUser ? JSON.parse(storedUser).name : 'Alex M.';
+
       snapshot.forEach((docSnap) => {
-        loadedPosts.push({ id: docSnap.id, ...docSnap.data() } as EngagementPost);
+        const postItem = { id: docSnap.id, ...docSnap.data() } as EngagementPost;
+        loadedPosts.push(postItem);
+
+        const isMyPost = postItem.author?.name && postItem.author.name.toLowerCase() === myName.toLowerCase();
+
+        if (isInitialPostsLoaded.current) {
+          if (!loadedPostIdsRef.current.has(docSnap.id)) {
+            const authorName = postItem.author?.name || '';
+            if (authorName && authorName.toLowerCase() !== myName.toLowerCase()) {
+              newPostDetected = postItem;
+            }
+          } else if (isMyPost) {
+            // Check for new comments/replies
+            const prevCommentCount = userCommentsCountRef.current[postItem.id];
+            const currentCommentCount = postItem.comments ? postItem.comments.length : 0;
+            if (prevCommentCount !== undefined && currentCommentCount > prevCommentCount) {
+              const lastComment = postItem.comments[postItem.comments.length - 1];
+              if (lastComment && lastComment.authorName.toLowerCase() !== myName.toLowerCase()) {
+                triggerNotificationChime();
+                onToast(`💬 ${lastComment.authorName} replied on your post: "${lastComment.text.substring(0, 30)}..."`);
+              }
+            }
+
+            // Check for new upvotes
+            const prevUpvoteCount = userUpvotesCountRef.current[postItem.id];
+            const currentUpvoteCount = postItem.upvotes || 0;
+            if (prevUpvoteCount !== undefined && currentUpvoteCount > prevUpvoteCount) {
+              triggerNotificationChime();
+              onToast(`💖 Someone liked your post: "${postItem.title || postItem.content.substring(0, 30)}..."`);
+            }
+          }
+        }
+        loadedPostIdsRef.current.add(docSnap.id);
+        
+        // Cache counts for comparison
+        userCommentsCountRef.current[postItem.id] = postItem.comments ? postItem.comments.length : 0;
+        userUpvotesCountRef.current[postItem.id] = postItem.upvotes || 0;
       });
+
       setPosts(loadedPosts);
+      isInitialPostsLoaded.current = true;
+
+      if (newPostDetected) {
+        triggerNotificationChime();
+        const categoryLabel = newPostDetected.type === 'event' 
+          ? '📅 New Event' 
+          : newPostDetected.type === 'announcement' 
+          ? '📢 New Announcement' 
+          : '📝 New Post';
+        onToast(`🔔 ${categoryLabel} from ${newPostDetected.author.name}: "${newPostDetected.title || newPostDetected.content.substring(0, 35)}..."`);
+      }
     }, (err) => {
       console.error("Error loading posts from Firestore:", err);
     });
@@ -1322,7 +1511,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   // Handle Bio modal actions
+  const getAuthorUsername = (authorName: string): string => {
+    if (allUsers) {
+      const matched = allUsers.find(u => u.name?.toLowerCase() === authorName.toLowerCase());
+      if (matched && matched.username) {
+        return matched.username;
+      }
+    }
+    // Fallback to stylized name username
+    return '@' + authorName.toLowerCase().replace(/\s+/g, '_');
+  };
+
   const getProfileByName = (name: string): MemberProfile => {
+    // Check real Firestore users in allUsers first
+    if (allUsers && allUsers.length > 0) {
+      const matched = allUsers.find(u => u.name?.toLowerCase() === name.toLowerCase());
+      if (matched) {
+        return {
+          name: matched.name,
+          avatarUrl: matched.avatarUrl,
+          regNumber: matched.regNumber || 'BIT/2026/001',
+          specialty: matched.bio?.split('•')?.[0]?.trim() || 'Student Member',
+          bio: matched.bio || 'Active member of </AdvocoDe>.',
+          techStack: matched.skills || ['React', 'TypeScript', 'Tailwind CSS'],
+          streakDays: matched.streak || 1,
+          points: matched.xp || 50,
+          portfolioItems: []
+        };
+      }
+    }
+
     const defaultAuthor: MemberProfile = {
       name,
       avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10B981&color=fff`,
@@ -1446,14 +1664,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
         post.author.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-  // Pin announcements to the top regardless of when they were posted
-  const filteredPosts = [...rawFiltered].sort((a, b) => {
-    const aAnn = a.type === 'announcement';
-    const bAnn = b.type === 'announcement';
-    if (aAnn && !bAnn) return -1;
-    if (!aAnn && bAnn) return 1;
-    return 0; // maintain relative chronological order for others
-  });
+  // Announcements should flow chronologically rather than being pinned at the top
+  const filteredPosts = [...rawFiltered];
 
   const currentUserAvatar = currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Alex')}&background=2563EB&color=fff`;
 
@@ -1699,11 +1911,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   onChange={(e: any) => setComposeCategory(e.target.value)}
                   className="bg-transparent border-0 text-[10px] text-slate-500 font-bold ml-0.5 cursor-pointer focus:outline-none focus:ring-0 max-w-[105px] sm:max-w-none truncate shrink-0"
                 >
+                <option value="">None</option>
                   <option value="code_share">#CodeShare</option>
                   <option value="question">#Question</option>
                   <option value="collaboration">#Collab</option>
                   <option value="announcement">#Announcement 📢</option>
                   <option value="event">#Event 📅</option>
+                  
                 </select>
               </div>
 
@@ -1798,6 +2012,80 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 );
               }
 
+              if (post.type === 'event') {
+                return (
+                  <div 
+                    key={post.id} 
+                    className="border-2 hover:border-amber-500/50 shadow-md my-4 mx-3 sm:mx-4 rounded-2xl p-5 relative overflow-hidden transition-all duration-300 animate-fade-in flex flex-col gap-4"
+                  >
+                    {/* Top row: Author profile & delete button */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div 
+                          onClick={(e) => handleOpenBio(post.author.name, e)}
+                          className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 cursor-pointer hover:opacity-90 animate-none shrink-0"
+                          title={`View ${post.author.name}'s bio`}
+                        >
+                          <img 
+                            src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author.name)}`} 
+                            alt={post.author.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {post.title && (
+                        <h2 className="text-base font-black uppercase text-slate-900 tracking-tight leading-tight">
+                          {post.title}
+                        </h2> 
+                      )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold">
+                            {getRelativeTimeString(post.timeMs || post.time)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {isMyPost && (
+                        <button
+                          onClick={(e) => handleDeletePost(post.id, e)}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all cursor-pointer z-20 shrink-0"
+                          title="Delete event post"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Event Title and description */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-700 font-semibold leading-relaxed whitespace-pre-wrap font-sans">
+                        {renderWithMentions(post.content, onToast)}
+                      </p>
+                    </div>
+
+                    {/* Prominent Counter with black gradient bg */}
+                    <div className="bg-blue from-slate-950 via-slate-900 to-slate-950 text-white rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md border border-slate-850">
+                      <div className="flex flex-col text-center sm:text-left">
+                        <span className="text-[9px] text-amber-400 font-black tracking-widest uppercase mb-0.5">EVENT COUNTDOWN</span>
+                         </div>
+                      <div className="shrink-0 scale-105">
+                        <EventProminentCountdown targetDateStr={post.eventDate} />
+                      </div>
+                    </div>
+
+                    {/* Attached Image inside Event Card */}
+                    {post.imageUrl && (
+                      <div className="rounded-xl overflow-hidden border border-slate-250 bg-slate-900 max-h-72 flex items-center justify-center shadow-sm">
+                        <img src={post.imageUrl} alt="Event illustration" className="w-full h-auto max-h-72 object-contain" />
+                      </div>
+                    )}
+
+                    
+                  </div>
+                );
+              }
+
               return (
                 <div 
                   key={post.id} 
@@ -1837,11 +2125,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                       {/* Author Header line */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-baseline min-w-0 flex-wrap sm:flex-nowrap">
-                         
-                          
-                          <span className={`mx-1.5 text-xs font-normal ${post.type === 'announcement' ? 'text-blue-200' : 'text-slate-300'}`}>•</span>
-                          <span className={`text-xs font-normal shrink-0 ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}>
+                        <div className="flex items-baseline min-w-0 flex-wrap sm:flex-nowrap gap-1">
+                          <span 
+                            onClick={(e) => handleOpenBio(post.author.name, e)}
+                            className="font-extrabold text-[13px] text-slate-800 dark:text-slate-200 hover:underline cursor-pointer shrink-0"
+                          >
+                            {post.author.name}
+                          </span>
+                          <span 
+                            onClick={(e) => handleOpenBio(post.author.name, e)}
+                            className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold truncate cursor-pointer hover:underline"
+                          >
+                            {getAuthorUsername(post.author.name)}
+                          </span>
+                          <span className={`mx-0.5 text-xs font-normal ${post.type === 'announcement' ? 'text-blue-200' : 'text-slate-300 dark:text-slate-700'}`}>•</span>
+                          <span className={`text-xs font-normal shrink-0 ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
                             {getRelativeTimeString(post.timeMs || post.time)}
                           </span>
                         </div>
@@ -2127,12 +2425,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
       ) : (
         /* CHAT MESSENGER VIEW MODE (WhatsApp style full width side-by-side) */
-        <div className="flex-1 flex overflow-hidden min-h-0 bg-slate-100">
+        <div className="flex-1 flex overflow-hidden min-h-0 bg-slate-100 dark:bg-slate-950">
           
           {/* LEFT PANEL: Chat rooms list */}
-          <div className={`w-full md:w-[350px] lg:w-[380px] border-r border-slate-200 bg-white flex flex-col h-full shrink-0 ${activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`w-full md:w-[350px] lg:w-[380px] border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full shrink-0 ${activeDMMember ? 'hidden md:flex' : 'flex'}`}>
             {/* Rooms list header */}
-            <div className="p-4 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/40 border-b border-slate-150 dark:border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -2140,45 +2438,45 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setChatViewMode('timeline');
                     onToast('Returning to Forum Feed timeline...');
                   }}
-                  className="p-1.5 -ml-1 hover:bg-slate-200 rounded-full text-slate-600 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  className="p-1.5 -ml-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all cursor-pointer flex items-center justify-center shrink-0"
                   title="Back to Feed"
                 >
-                  <ArrowLeft className="w-4 h-4 text-slate-700" />
+                  <ArrowLeft className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </button>
-                <h3 className="font-extrabold text-sm text-slate-800 tracking-wide uppercase">Conversations</h3>
+                <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-100 tracking-wide uppercase">Conversations</h3>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setShowAddContactDropdown(!showAddContactDropdown)}
-                  className="p-1.5 hover:bg-slate-200/80 rounded-full text-slate-600 transition-all cursor-pointer flex items-center justify-center"
+                  className="p-1.5 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 transition-all cursor-pointer flex items-center justify-center"
                   title="Start a new chat with anyone"
                 >
-                  <Plus className="w-5 h-5 text-slate-700" />
+                  <Plus className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </button>
               </div>
             </div>
 
             {/* Quick search inside rooms list */}
-            <div className="p-3 bg-white border-b border-slate-100">
+            <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   placeholder="Search chats..."
                   value={dmSearchText}
                   onChange={(e) => setDmSearchText(e.target.value)}
-                  className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-300 rounded-lg pl-9 pr-6 py-1.5 text-xs font-semibold border border-transparent transition-all text-slate-800 shadow-inner"
+                  className="w-full bg-slate-50 dark:bg-slate-950/60 hover:bg-slate-100 dark:hover:bg-slate-950 text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-700 rounded-lg pl-9 pr-6 py-1.5 text-xs font-semibold border border-transparent transition-all shadow-inner dark:placeholder-slate-500"
                 />
               </div>
             </div>
 
             {/* Dynamic alphabetically dropdown to start a new chat */}
             {showAddContactDropdown && (
-              <div className="bg-slate-50 p-3 border-b border-slate-200 max-h-48 overflow-y-auto space-y-1.5">
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 border-b border-slate-200 dark:border-slate-800 max-h-48 overflow-y-auto space-y-1.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Select a Member</span>
-                  <button onClick={() => setShowAddContactDropdown(false)} className="text-[10px] text-slate-400 hover:text-slate-800 font-bold">✕</button>
+                  <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest">Select a Member</span>
+                  <button onClick={() => setShowAddContactDropdown(false)} className="text-[10px] text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 font-bold">✕</button>
                 </div>
                 {allAvailableMembers
                   .filter(m => m.id !== myId && m.memberName.toLowerCase().includes(dmSearchText.toLowerCase()))
@@ -2187,20 +2485,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <div
                       key={member.id}
                       onClick={() => handleAddOrOpenChat(member)}
-                      className="flex items-center gap-2.5 p-2 bg-white hover:bg-blue-50 border border-slate-200/60 rounded-xl cursor-pointer transition-colors"
+                      className="flex items-center gap-2.5 p-2 bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/60 dark:border-slate-800/80 rounded-xl cursor-pointer transition-colors"
                     >
                       <img src={member.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-slate-800 truncate">{member.memberName}</h4>
+                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{member.memberName}</h4>
                       </div>
-                      <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded-full uppercase">Chat</span>
+                      <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-full uppercase">Chat</span>
                     </div>
                   ))}
               </div>
             )}
 
             {/* Chats list scrolling viewport */}
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-1 bg-white">
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50 p-1 bg-white dark:bg-slate-900/60">
               {dmChats
                 .filter(c => c.memberName.toLowerCase().includes(dmSearchText.toLowerCase()))
                 .map((chat) => {
@@ -2222,12 +2520,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         setActiveDMMember(chat.id);
                         onToast(`Opened direct message conversation with ${chat.memberName}`);
                       }}
-                      className={`p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-all cursor-pointer rounded-xl mx-1.5 my-1 border ${
+                      className={`p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-850/60 transition-all cursor-pointer rounded-xl mx-1.5 my-1 border ${
                         isActive 
-                          ? 'bg-blue-50/50 border-blue-200/60 shadow-sm' 
+                          ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/60 dark:border-blue-900/40 shadow-sm' 
                           : chat.id === 'saved_messages' 
-                            ? 'bg-indigo-50/20 border-indigo-100/30' 
-                            : 'border-slate-100/60'
+                            ? 'bg-indigo-50/20 dark:bg-indigo-950/10 border-indigo-100/30 dark:border-indigo-900/20' 
+                            : 'border-slate-100/60 dark:border-slate-800/40'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -2235,21 +2533,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <img 
                             src={chat.avatarUrl} 
                             alt={chat.memberName} 
-                            className="w-10 h-10 rounded-full border border-slate-200 object-cover" 
+                            className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 object-cover" 
                           />
                           {chat.online && (
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs animate-pulse"></span>
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs animate-pulse"></span>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <h5 className={`text-xs font-bold truncate ${unreadInChat > 0 && !isActive ? 'text-slate-900 font-extrabold' : 'text-slate-800'}`}>{chat.memberName}</h5>
-                            <span className="text-[9.5px] text-slate-400 font-semibold">{chat.username}</span>
+                            <h5 className={`text-xs font-bold truncate ${unreadInChat > 0 && !isActive ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-800 dark:text-slate-200'}`}>{chat.memberName}</h5>
+                            <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-semibold">{chat.username}</span>
                           </div>
-                          <p className={`text-[10.5px] truncate mt-0.5 ${unreadInChat > 0 && !isActive ? 'text-slate-900 font-semibold' : 'text-slate-400 font-medium'}`}>
+                          <p className={`text-[10.5px] truncate mt-0.5 ${unreadInChat > 0 && !isActive ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-400 dark:text-slate-400 font-medium'}`}>
                             {lastMsg ? (
                               <span>
-                                <span className={`font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600' : 'text-slate-500'}`}>{lastMsg.sender === 'me' ? 'Me: ' : `${lastMsg.senderName || 'Member'}: `}</span>
+                                <span className={`font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>{lastMsg.sender === 'me' ? 'Me: ' : `${lastMsg.senderName || 'Member'}: `}</span>
                                 {lastMsg.text}
                               </span>
                             ) : (
@@ -2260,19 +2558,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                       
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className={`text-[8px] font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600 font-black' : 'text-slate-400'}`}>
+                        <span className={`text-[8px] font-extrabold ${unreadInChat > 0 && !isActive ? 'text-blue-600 dark:text-blue-400 font-black' : 'text-slate-400 dark:text-slate-500'}`}>
                           {lastMsg ? lastMsg.time : ''}
                         </span>
                         {unreadInChat > 0 && !isActive ? (
-                          <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border border-white shadow-xs animate-bounce">
+                          <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border border-white dark:border-slate-800 shadow-xs animate-bounce">
                             {unreadInChat}
                           </span>
                         ) : chat.online ? (
-                          <span className="text-[8.5px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                          <span className="text-[8.5px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
                             Active
                           </span>
                         ) : (
-                          <span className="text-[8.5px] font-bold text-slate-400 bg-slate-50 border border-slate-200/50 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                          <span className="text-[8.5px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-800/40 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
                             Offline
                           </span>
                         )}
@@ -2284,22 +2582,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
 
           {/* RIGHT PANEL: Chat conversation room pane */}
-          <div className={`flex-1 bg-[#eae6df] bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:20px_20px] flex flex-col h-full relative ${!activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`flex-1 bg-[#eae6df] dark:bg-slate-950 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#1e293b_1.5px,transparent_1.5px)] [background-size:20px_20px] flex flex-col h-full relative ${!activeDMMember ? 'hidden md:flex' : 'flex'}`}>
             {activeDMMember ? (
               (() => {
                 const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
                 const chatIdToUse = activeChat?.id || activeDMMember || '';
                 
                 return (
-                  <div className="flex-1 flex flex-col min-h-0 bg-[#f0f2f5] bg-[radial-gradient(#e2e8f0_1.2px,transparent_1.2px)] [background-size:16px_16px]">
+                  <div className="flex-1 flex flex-col min-h-0 bg-[#f0f2f5] dark:bg-slate-950 bg-[radial-gradient(#e2e8f0_1.2px,transparent_1.2px)] dark:bg-[radial-gradient(#1e293b_1.2px,transparent_1.2px)] [background-size:16px_16px]">
                     
                     {/* Conversation Header */}
-                    <div className="bg-[#f0f2f5] text-slate-800 border-b border-slate-200 py-3 px-4 shadow-sm flex items-center justify-between shrink-0">
+                    <div className="bg-[#f0f2f5] dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 py-3 px-4 shadow-sm flex items-center justify-between shrink-0">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <button 
                           type="button"
                           onClick={() => setActiveDMMember(null)}
-                          className="p-1.5 hover:bg-slate-200 rounded-full transition-all text-slate-700 shrink-0 cursor-pointer"
+                          className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer"
                           title="Back to conversations list"
                         >
                           <ArrowLeft className="w-5 h-5" />
@@ -2309,22 +2607,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <img 
                             src={activeChat?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeDMMember || 'User')}`} 
                             alt={activeChat?.memberName || activeDMMember || ''} 
-                            className="w-10 h-10 rounded-full object-cover border border-slate-300 shadow-xs" 
+                            className="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-slate-700 shadow-xs" 
                           />
                           {activeChat?.online && (
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></span>
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
                           )}
                         </div>
 
                         <div className="min-w-0 flex flex-col">
                           <div className="flex items-center gap-1.5">
-                            <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-slate-800">{activeChat?.memberName || activeDMMember}</h4>
-                            {activeChat?.username && <span className="text-[10px] text-slate-400 font-semibold">{activeChat.username}</span>}
+                            <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-slate-800 dark:text-slate-100">{activeChat?.memberName || activeDMMember}</h4>
+                            {activeChat?.username && <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">{activeChat.username}</span>}
                           </div>
-                          <span className="text-[10px] text-blue-600 font-extrabold tracking-wide uppercase">
+                          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-extrabold tracking-wide uppercase">
                             {activeChat?.typing ? (
                               <span className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></span>
+                                <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce"></span>
                                 typing...
                               </span>
                             ) : activeChat?.statusText || (activeChat?.online ? 'ONLINE' : 'OFFLINE (LAST SEEN RECENTLY)')}
@@ -2333,39 +2631,141 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Chat Messages Body (WhatsApp-style bubbles on right/left) */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col no-scrollbar">
+                    {/* Chat Messages Body (WhatsApp-style bubbles on right/left with tail pointers and dark mode) */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar">
                       {(rtdbMessages.length > 0 ? rtdbMessages : activeChat?.messages || []).map((m: any) => {
                         const isMe = m.sender === 'me';
+                        const isSwipingThis = swipedMessageId === m.id;
                         
                         return (
                           <div 
                             key={m.id}
-                            onDoubleClick={() => handleToggleHeart(chatIdToUse, m.id)}
-                            className={`flex items-end gap-2.5 max-w-[85%] relative transition-all duration-200 select-none ${
+                            className={`flex items-end gap-2.5 max-w-[85%] relative transition-all duration-75 select-none ${
                               isMe ? 'self-end flex-row-reverse' : 'self-start flex-row'
                             }`}
+                            onTouchStart={(e) => {
+                              const touch = e.touches[0];
+                              touchStartCoords.current = { x: touch.clientX, y: touch.clientY };
+                              setSwipedMessageId(m.id);
+                              setSwipeOffset(0);
+
+                              // Double tap detection
+                              const now = Date.now();
+                              if (now - lastTouchTap.current < 280) {
+                                handleToggleHeart(chatIdToUse, m.id);
+                                if (navigator.vibrate) navigator.vibrate(40);
+                              }
+                              lastTouchTap.current = now;
+
+                              // Mobile Touch Hold (Long press) timer
+                              const timer = setTimeout(() => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setActiveContextMenu({
+                                  messageId: m.id,
+                                  x: rect.left + rect.width / 2,
+                                  y: rect.top + rect.height / 2
+                                });
+                                if (navigator.vibrate) navigator.vibrate(60);
+                              }, 600);
+                              touchHoldTimerRef.current = timer;
+                            }}
+                            onTouchMove={(e) => {
+                              if (!touchStartCoords.current) return;
+                              const touch = e.touches[0];
+                              const diffX = touch.clientX - touchStartCoords.current.x;
+                              const diffY = touch.clientY - touchStartCoords.current.y;
+
+                              if (diffX > 0 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                                setSwipeOffset(Math.min(diffX, 85));
+                                if (diffX > 15 && touchHoldTimerRef.current) {
+                                  clearTimeout(touchHoldTimerRef.current);
+                                  touchHoldTimerRef.current = null;
+                                }
+                              }
+                            }}
+                            onTouchEnd={(e) => {
+                              if (touchHoldTimerRef.current) {
+                                clearTimeout(touchHoldTimerRef.current);
+                                touchHoldTimerRef.current = null;
+                              }
+                              if (swipeOffset > 45) {
+                                setReplyingToMessage(m);
+                                onToast(`Replying to ${m.senderName || 'Member'}`);
+                                if (navigator.vibrate) navigator.vibrate(30);
+                              }
+                              setSwipeOffset(0);
+                              setSwipedMessageId(null);
+                              touchStartCoords.current = null;
+                            }}
+                            onMouseDown={(e) => {
+                              if (e.button !== 0) return; // Only left click
+                              const startX = e.clientX;
+                              const startY = e.clientY;
+
+                              const cancelHold = () => {
+                                if (mouseHoldTimerRef.current) {
+                                  clearTimeout(mouseHoldTimerRef.current);
+                                  mouseHoldTimerRef.current = null;
+                                }
+                                document.removeEventListener('mousemove', onMouseMove);
+                                document.removeEventListener('mouseup', cancelHold);
+                              };
+
+                              const onMouseMove = (moveEvt: MouseEvent) => {
+                                if (Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY) > 8) {
+                                  cancelHold();
+                                }
+                              };
+
+                              document.addEventListener('mousemove', onMouseMove);
+                              document.addEventListener('mouseup', cancelHold);
+
+                              const timer = setTimeout(() => {
+                                setActiveContextMenu({
+                                  messageId: m.id,
+                                  x: e.clientX,
+                                  y: e.clientY
+                                });
+                                document.removeEventListener('mousemove', onMouseMove);
+                                document.removeEventListener('mouseup', cancelHold);
+                              }, 450);
+                              mouseHoldTimerRef.current = timer;
+                            }}
                           >
                             {/* Sender avatar only for other members */}
                             {!isMe && (
                               <img 
                                 src={m.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.senderName || 'Member')}&background=64748B&color=fff`} 
-                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-xs shrink-0" 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-xs shrink-0" 
                                 alt="" 
                               />
                             )}
 
                             {/* Message bubble itself */}
                             <div 
-                              className={`relative px-4 py-2.5 text-[12.5px] font-semibold leading-relaxed transition-all duration-200 select-none cursor-pointer group shadow-xs ${
+                              className={`relative px-4 py-2.5 text-[12.5px] font-semibold leading-relaxed transition-all duration-75 select-none cursor-pointer group shadow-xs ${
                                 isMe 
-                                  ? 'bg-[#EFF6FF] text-slate-800 rounded-2xl rounded-tr-none border border-[#DBEAFE]' 
-                                  : 'bg-white text-slate-800 rounded-2xl rounded-tl-none border border-slate-200/60'
+                                  ? 'bg-blue-600 dark:bg-blue-500 text-white rounded-2xl rounded-br-none' 
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-bl-none'
                               }`}
-                              title="Double-tap to heart message!"
+                              style={{
+                                transform: isSwipingThis ? `translateX(${swipeOffset}px)` : 'none',
+                              }}
+                              title="Swipe right to reply, hold for options!"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleHeart(chatIdToUse, m.id);
+                              }}
                             >
+                              {/* Tail Pointer */}
+                              {isMe ? (
+                                <div className="absolute right-0 bottom-0 w-3 h-3 bg-blue-600 dark:bg-blue-500 translate-x-[3px] [clip-path:polygon(0_0,0_100%,100%_100%)] rounded-br-[4px] pointer-events-none" />
+                              ) : (
+                                <div className="absolute left-0 bottom-0 w-3 h-3 bg-slate-100 dark:bg-slate-800 -translate-x-[3px] [clip-path:polygon(100%_0,100%_100%,0_100%)] rounded-bl-[4px] pointer-events-none" />
+                              )}
+
                               {/* Floating Micro reactions selector on hover */}
-                              <div className={`absolute -top-7 ${isMe ? 'right-0' : 'left-0'} hidden group-hover:flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-full shadow-lg z-10 animate-fade-in`}>
+                              <div className={`absolute -top-7 ${isMe ? 'right-0' : 'left-0'} hidden group-hover:flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-full shadow-lg z-10 animate-fade-in`}>
                                 {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
                                   <button 
                                     key={emoji}
@@ -2383,8 +2783,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                               {/* Identified by sender inside threads */}
                               {!isMe && (
-                                <div className="text-[10px] font-extrabold text-blue-600 mb-1 tracking-tight">
+                                <div className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 mb-1 tracking-tight">
                                   {m.senderName || 'Member'}
+                                </div>
+                              )}
+
+                              {/* Replied message block preview */}
+                              {m.replyTo && (
+                                <div className="mb-2 p-2 bg-black/10 dark:bg-white/10 rounded-r-lg border-l-4 border-blue-500 dark:border-blue-400 text-[11px] leading-snug text-left truncate max-w-xs">
+                                  <span className="block font-black text-blue-600 dark:text-blue-300">
+                                    {m.replyTo.senderName}
+                                  </span>
+                                  <span className="opacity-80">
+                                    {m.replyTo.text}
+                                  </span>
                                 </div>
                               )}
 
@@ -2394,26 +2806,47 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               {/* Reaction Badges */}
                               {m.reactions && m.reactions.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1.5">
-                                  {m.reactions.map((emoji, idx) => (
-                                    <span key={idx} className="bg-slate-50 text-[10px] px-1.5 py-0.5 rounded-full shadow-xs border border-slate-150 text-slate-800 flex items-center justify-center">
-                                      {emoji}
-                                    </span>
-                                  ))}
+                                  {(() => {
+                                    const counts: Record<string, number> = {};
+                                    if (m.reactionUsers) {
+                                      Object.values(m.reactionUsers).forEach((val: any) => {
+                                        if (val) counts[val] = (counts[val] || 0) + 1;
+                                      });
+                                    } else {
+                                      m.reactions.forEach((r: string) => {
+                                        counts[r] = 1;
+                                      });
+                                    }
+                                    return Object.keys(counts).map((emoji) => (
+                                      <span key={emoji} className="bg-slate-50 dark:bg-slate-900 text-[10px] px-1.5 py-0.5 rounded-full shadow-xs border border-slate-150 dark:border-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                        <span>{emoji}</span>
+                                        <span className="text-[9px] font-black opacity-85">{counts[emoji]}</span>
+                                      </span>
+                                    ));
+                                  })()}
                                 </div>
                               )}
 
                               {/* Heart Overlay */}
                               {m.hearted && (
-                                <div className={`absolute -bottom-2.5 ${isMe ? '-left-2' : '-right-2'} bg-white border border-rose-100 rounded-full p-1 shadow-xs animate-pulse flex items-center justify-center`}>
+                                <div className={`absolute -bottom-2.5 ${isMe ? '-left-2' : '-right-2'} bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-950/50 rounded-full p-1 shadow-xs animate-pulse flex items-center justify-center`}>
                                   <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
                                 </div>
                               )}
 
                               {/* Footer Timestamp & Checkmarks */}
-                              <div className="flex items-center justify-end gap-1 mt-1 text-[8.5px] font-bold text-slate-400">
-                                <span className="text-slate-450">{m.time}</span>
+                              <div className={`flex items-center justify-end gap-1.5 mt-1.5 text-[8.5px] font-bold ${isMe ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                <span>{m.time}</span>
                                 {isMe && (
-                                  <span className="text-sky-500 font-extrabold inline">✓✓</span>
+                                  <span className="flex items-center">
+                                    {m.status === 'sent' ? (
+                                      <Check className="w-3.5 h-3.5 text-blue-200/60" />
+                                    ) : m.status === 'delivered' ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-blue-200/80" />
+                                    ) : (
+                                      <CheckCheck className="w-3.5 h-3.5 text-sky-200 fill-current" />
+                                    )}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -2422,10 +2855,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       })}
                     </div>
 
+                    {/* Reply Preview Banner */}
+                    {replyingToMessage && (
+                      <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 animate-fade-in shrink-0">
+                        <div className="border-l-4 border-blue-500 dark:border-blue-400 pl-3 min-w-0">
+                          <span className="block text-[10px] font-black text-blue-600 dark:text-blue-400">
+                            Replying to {replyingToMessage.senderName || 'Member'}
+                          </span>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+                            {replyingToMessage.text}
+                          </p>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setReplyingToMessage(null)}
+                          className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-750 cursor-pointer text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
                     {/* Chat Input Bar */}
                     <form 
                       onSubmit={handleSendDM}
-                      className="p-3 border-t border-slate-200 bg-[#f0f2f5] flex items-center gap-2 shrink-0"
+                      className="p-3 border-t border-slate-200 dark:border-slate-800 bg-[#f0f2f5] dark:bg-slate-900 flex items-center gap-2 shrink-0"
                     >
                       <input
                         type="text"
@@ -2437,7 +2891,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           setActiveDMInput(val);
                           checkMentionTrigger(val, 'dm');
                         }}
-                        className="flex-1 bg-white border border-slate-200 focus:border-slate-300 rounded-lg px-4 py-2 text-xs font-semibold focus:outline-none text-slate-900 transition-all shadow-inner"
+                        className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-slate-300 dark:focus:border-slate-700 rounded-lg px-4 py-2 text-xs font-semibold focus:outline-none text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                       />
 
                       <button 
@@ -2447,20 +2901,110 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <Send className="w-4 h-4" />
                       </button>
                     </form>
+
+                    {/* Floating Context Option Modal (PC / hold menu) */}
+                    {activeContextMenu && (
+                      <div 
+                        className="fixed inset-0 z-50 overflow-hidden bg-slate-950/25 dark:bg-black/45 backdrop-blur-xs flex items-center justify-center"
+                        onClick={() => setActiveContextMenu(null)}
+                      >
+                        <div 
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-2xl shadow-xl w-60 animate-scale-in"
+                          style={{
+                            position: 'fixed',
+                            left: `${Math.min(activeContextMenu.x, window.innerWidth - 260)}px`,
+                            top: `${Math.min(activeContextMenu.y, window.innerHeight - 300)}px`,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                            Message Options
+                          </div>
+                          
+                          <div className="p-1 space-y-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
+                                if (targetMsg) {
+                                  setReplyingToMessage(targetMsg);
+                                  onToast(`Replying to ${targetMsg.senderName || 'Member'}`);
+                                }
+                                setActiveContextMenu(null);
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                            >
+                              <CornerUpLeft className="w-4 h-4 text-blue-500" />
+                              <span>Reply to Message</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
+                                if (targetMsg) {
+                                  handleToggleHeart(chatIdToUse, targetMsg.id);
+                                }
+                                setActiveContextMenu(null);
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                            >
+                              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                              <span>Heart Message</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
+                                if (targetMsg) {
+                                  navigator.clipboard.writeText(targetMsg.text);
+                                  onToast('✓ Copied message to clipboard!');
+                                }
+                                setActiveContextMenu(null);
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                            >
+                              <Copy className="w-4 h-4 text-amber-500" />
+                              <span>Copy Text</span>
+                            </button>
+
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+
+                            {/* Quick Reactions line */}
+                            <div className="flex justify-between p-1 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                              {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => {
+                                    handleAddReaction(chatIdToUse, activeContextMenu.messageId, emoji);
+                                    setActiveContextMenu(null);
+                                  }}
+                                  className="hover:scale-125 transition-transform text-sm p-1 cursor-pointer"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()
             ) : (
               /* EMPTY WELCOME SCREEN */
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#f8f9fa]">
-                <div className="w-20 h-20 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-md">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#f8f9fa] dark:bg-slate-950">
+                <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 border border-blue-100 dark:border-blue-900 shadow-md">
                   <MessageSquare className="w-10 h-10" />
                 </div>
-                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">AdvocoDe Messenger</h3>
+                <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100 tracking-tight">AdvocoDe Messenger</h3>
                 
-                <div className="mt-6 flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/20 px-3 py-1.5 rounded-full">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
-                   </div>
+                <div className="mt-6 flex items-center gap-1.5 bg-blue-600/10 dark:bg-blue-900/20 border border-blue-600/20 dark:border-blue-800/40 px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full animate-ping"></span>
+                </div>
               </div>
             )}
           </div>
