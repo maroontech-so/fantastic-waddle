@@ -48,6 +48,10 @@ import { cleanForFirestore } from '../utils/clean';
 import { ref, onValue, push, set, update, onDisconnect, serverTimestamp } from 'firebase/database';
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
+import CodeMirror, { EditorView as CMEditorView } from '@uiw/react-codemirror';
+import { html } from '@codemirror/lang-html';
+import { css } from '@codemirror/lang-css';
+import { javascript } from '@codemirror/lang-javascript';
 
 export const getRelativeTimeString = (timeMsOrStr: number | string | any): string => {
   if (!timeMsOrStr) return 'Just now';
@@ -211,14 +215,77 @@ export interface EngagementPost {
   eventVenue?: string;
 }
 
-export const renderWithMentions = (text: string, onToast?: (msg: string) => void) => {
+const CodeSnippet = ({ code, language, onToast }: { code: string; language: string; onToast?: (msg: string) => void; key?: any }) => {
+  const [copied, setCopied] = useState(false);
+
+  const getLanguageExtension = (lang: string) => {
+    const l = lang.toLowerCase();
+    if (l === 'html' || l === 'xml') return [html()];
+    if (l === 'css') return [css()];
+    return [javascript()]; // default for js, ts, json, etc.
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    if (onToast) onToast('✓ Code snippet copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-[#0d1117] dark:bg-slate-950/80 overflow-hidden text-left shadow-sm select-text">
+      {/* Code Header */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 select-none">
+        <span className="uppercase tracking-wider font-mono">{language}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3 h-3 text-emerald-500" />
+              <span className="text-emerald-500 font-bold">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3 h-3" />
+              <span className="font-bold">Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* CodeMirror Read-only Editor */}
+      <div className="text-xs font-mono">
+        <CodeMirror
+          value={code.trim()}
+          theme="dark"
+          extensions={[...getLanguageExtension(language), CMEditorView.lineWrapping]}
+          editable={false}
+          readOnly={true}
+          basicSetup={{
+            lineNumbers: true,
+            foldGutter: false,
+            syntaxHighlighting: true,
+            bracketMatching: true,
+            highlightActiveLine: false,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+export const renderOnlyMentions = (text: string, onToast?: (msg: string) => void) => {
   if (!text) return null;
   const parts = text.split(/(@[a-zA-Z0-9_/.-]+)/g);
   return parts.map((part, idx) => {
     if (part.startsWith('@') && part.length > 1) {
       return (
         <span
-          key={idx}
+          key={`mention-${idx}`}
           onClick={(e) => {
             e.stopPropagation();
             if (onToast) onToast(`Mentioned member: ${part}`);
@@ -229,8 +296,63 @@ export const renderWithMentions = (text: string, onToast?: (msg: string) => void
         </span>
       );
     }
+    
+    // Now handle inline code inside the non-mention part
+    if (part.includes('`')) {
+      const inlineParts = part.split(/`([^`]+)`/g);
+      return inlineParts.map((subPart, subIdx) => {
+        if (subIdx % 2 === 1) {
+          return (
+            <code 
+              key={`inline-code-${subIdx}`}
+              className="bg-slate-150 dark:bg-slate-900 text-rose-600 dark:text-rose-400 font-mono text-[11px] px-1.5 py-0.5 rounded-md mx-0.5 border border-slate-200 dark:border-slate-800"
+            >
+              {subPart}
+            </code>
+          );
+        }
+        return subPart;
+      });
+    }
+    
     return part;
   });
+};
+
+export const renderWithMentions = (text: string, onToast?: (msg: string) => void) => {
+  if (!text) return null;
+  
+  // Split by triple backticks for block code snippet detection
+  if (text.includes('```')) {
+    const codeParts = text.split(/```/g);
+    return codeParts.map((part, index) => {
+      const isCodeBlock = index % 2 === 1;
+      if (isCodeBlock) {
+        let code = part;
+        let language = 'code';
+        const lines = part.split('\n');
+        if (lines.length > 0) {
+          const firstLine = lines[0].trim();
+          if (firstLine && /^[a-zA-Z0-9+#-]+$/.test(firstLine) && firstLine.length < 15) {
+            language = firstLine;
+            code = lines.slice(1).join('\n');
+          }
+        }
+        return (
+          <CodeSnippet
+            key={`code-${index}`}
+            code={code}
+            language={language}
+            onToast={onToast}
+          />
+        );
+      } else {
+        return <span key={`text-block-${index}`}>{renderOnlyMentions(part, onToast)}</span>;
+      }
+    });
+  }
+  
+  return renderOnlyMentions(text, onToast);
 };
 
 // Live Event Countdown Timer (Bold and unequivocal)
@@ -357,6 +479,8 @@ interface ChatViewProps {
   currentUser?: AppUser | null;
   initialDMUserUid?: string | null;
   onClearInitialDMUser?: () => void;
+  onViewProfile?: (profile: MemberProfile) => void;
+  onViewModeChange?: (mode: 'timeline' | 'messages') => void;
 }
 
 export const DEFAULT_POSTS: EngagementPost[] = [
@@ -518,11 +642,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   currentUser: propUser,
   initialDMUserUid,
   onClearInitialDMUser,
+  onViewProfile,
+  onViewModeChange,
 }) => {
   const [posts, setPosts] = useState<EngagementPost[]>([]);
   const [currentUserState, setCurrentUserState] = useState<any>(null);
   const currentUser = propUser || currentUserState;
-  
+
   // Search filter query state
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -598,6 +724,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [activeDMMember, setActiveDMMember] = useState<string | null>(null);
   const [isDMWidgetExpanded, setIsDMWidgetExpanded] = useState(false);
   const [chatViewMode, setChatViewMode] = useState<'timeline' | 'messages'>('timeline');
+
+  // Sync chat view mode with parent listener
+  useEffect(() => {
+    if (onViewModeChange) {
+      onViewModeChange(chatViewMode);
+    }
+  }, [chatViewMode, onViewModeChange]);
+  const dmTextareaRef = useRef<HTMLTextAreaElement>(null);
   const lastKnownMsgIdsRef = useRef<Set<string>>(new Set());
   const isInitialPostsLoaded = useRef(false);
   const loadedPostIdsRef = useRef<Set<string>>(new Set());
@@ -1005,6 +1139,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const userMsgText = activeDMInput.trim();
     setActiveDMInput('');
+    if (dmTextareaRef.current) {
+      dmTextareaRef.current.style.height = '38px';
+    }
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const nowTs = Date.now();
 
@@ -1094,26 +1231,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return [myId, cId].sort().join('___');
   };
 
-  const handleToggleHeart = (chatId: string, messageId: string) => {
-    const roomKey = getRtdbRoomKey(chatId);
-    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}/hearted`);
-    const legacyRoomKey = [myId, chatId].sort().join('_');
-    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}/hearted`);
 
-    const currentMsg = rtdbMessages.find(m => m.id === messageId);
-    const currentHearted = currentMsg?.hearted;
-    const nextHearted = !currentHearted;
-
-    set(msgRef, nextHearted).catch(() => {});
-    if (roomKey !== legacyRoomKey) {
-      set(legacyRef, nextHearted).catch(() => {});
-    }
-
-    if (nextHearted) {
-      onToast('💖 Message double-tapped! +5 XP');
-      if (onRewardXP) onRewardXP(5, 'engagement', 'Liking a Direct Message');
-    }
-  };
 
   const handleAddReaction = (chatId: string, messageId: string, emoji: string) => {
     const roomKey = getRtdbRoomKey(chatId);
@@ -1155,6 +1273,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
       onToast(`Removed reaction`);
     }
   };
+
+  const handleDeleteMessage = (chatId: string, messageId: string) => {
+    const roomKey = getRtdbRoomKey(chatId);
+    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}`);
+    const legacyRoomKey = [myId, chatId].sort().join('_');
+    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}`);
+
+    set(msgRef, null)
+      .then(() => {
+        onToast('Message deleted successfully');
+      })
+      .catch((err) => {
+        onToast(`Failed to delete message: ${err.message}`);
+      });
+
+    if (roomKey !== legacyRoomKey) {
+      set(legacyRef, null).catch(() => {});
+    }
+  };
+
   // Keyboard navigation reference
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -1638,8 +1776,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const handleOpenBio = (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const profile = getProfileByName(name);
-    setBioProfile(profile);
-    setIsBioOpen(true);
+    if (onViewProfile) {
+      onViewProfile(profile);
+    } else {
+      setBioProfile(profile);
+      setIsBioOpen(true);
+    }
   };
 
   const handleStartDMFromProfile = (memberName: string) => {
@@ -1673,14 +1815,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
     <div className="flex flex-col w-full h-full overflow-hidden bg-slate-50 relative animate-fade-in font-sans">
       
       {/* VIEW PANEL ROUTER */}
-      {chatViewMode === 'timeline' ? (
-        <div className="flex-1 flex overflow-hidden min-h-0 bg-white">
-          
-          {/* CENTRAL TIMELINE PANEL (X-Style Feed) */}
-          <div 
-            ref={timelineRef}
-            className="flex-1 max-w-2xl w-full border-r border-slate-200/60 bg-white flex flex-col h-full overflow-y-auto no-scrollbar relative shrink-0"
-          >
+      {/* On PC screen (lg:flex), we display BOTH the feed and messages side-by-side, replacing the right sidebar. */}
+      {/* On mobile/tablet (< lg), we conditionally render them based on chatViewMode. */}
+      <div className="flex-1 flex overflow-hidden min-h-0 bg-white dark:bg-slate-900">
+        
+        {/* CENTRAL TIMELINE PANEL (X-Style Feed) */}
+        <div 
+          ref={timelineRef}
+          className={`flex-1 max-w-2xl w-full border-r border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full overflow-y-auto no-scrollbar relative shrink-0 ${
+            chatViewMode === 'timeline' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
         
         {/* X-Style Header Row (Sticky) */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 flex flex-col shrink-0 px-4 py-3">
@@ -1729,7 +1874,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   setChatViewMode('messages');
                   onToast('Opening direct messaging platform...');
                 }}
-                className="relative p-2 rounded-full border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+                className="lg:hidden relative p-2 rounded-full border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
                 title="Open Direct Messages"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -2065,7 +2210,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
 
                     {/* Prominent Counter with black gradient bg */}
-                    <div className="bg-blue from-slate-950 via-slate-900 to-slate-950 text-white rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md border border-slate-850">
+                    <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md border border-slate-850">
                       <div className="flex flex-col text-center sm:text-left">
                         <span className="text-[9px] text-amber-400 font-black tracking-widest uppercase mb-0.5">EVENT COUNTDOWN</span>
                          </div>
@@ -2359,76 +2504,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       </div>
 
-      {/* RIGHT SIDEBAR PANEL (Desktop X-Style "Who to follow" & "Trends") */}
-      <div className="hidden lg:flex w-80 p-5 flex-col gap-4 overflow-y-auto shrink-0 bg-slate-50/50 border-r border-slate-100">
-        
-        {/* Search widget */}
-        <div className="bg-slate-100/90 rounded-full flex items-center px-4 py-2 border border-transparent focus-within:border-blue-500 focus-within:bg-white transition-all shadow-sm">
-          <Search className="w-4 h-4 text-slate-400 mr-2" />
-          <input
-            type="text"
-            placeholder="Search feed..."
-            onClick={() => onToast('Global searching timeline activated!')}
-            className="bg-transparent text-xs w-full focus:outline-none placeholder-slate-400 text-slate-800 font-bold"
-          />
-        </div>
-
-        {/* Who to Follow Box - Loaded from real authenticated Firestore users */}
-        <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-          <h2 className="font-extrabold text-sm text-slate-900 tracking-tight">
-            Who to follow (Real Members)
-          </h2>
-
-          <div className="space-y-3.5">
-            {allUsers && allUsers.length > 0 ? (
-              allUsers.slice(0, 5).map((person) => {
-                const personKey = person.uid || person.email || person.name;
-                const following = !!followedUsers[personKey];
-                return (
-                  <div key={personKey} className="flex items-center justify-between gap-2.5">
-                    <div 
-                      onClick={(e) => handleOpenBio(person.name, e)}
-                      className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 min-w-0"
-                      title={`View ${person.name}'s bio portfolio`}
-                    >
-                      <img src={person.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`} alt={person.name} className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-slate-800 hover:underline truncate">{person.name}</h4>
-                        <p className="text-[10px] text-slate-400 font-semibold truncate">{person.bio || person.regNumber}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        const newStatus = !following;
-                        setFollowedUsers((prev) => ({ ...prev, [personKey]: newStatus }));
-                        onToast(newStatus ? `Following ${person.name}!` : `Unfollowed ${person.name}`);
-                      }}
-                      className={`px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm active:scale-95 transition-all cursor-pointer ${
-                        following 
-                          ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' 
-                          : 'bg-slate-900 hover:bg-slate-800 text-white'
-                      }`}
-                    >
-                      {following ? 'Following' : 'Follow'}
-                    </button>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-xs text-slate-400 font-medium">No other authenticated members yet. Invite your classmates!</p>
-            )}
-          </div>
-        </div>
-
-      </div>
-      </div>
-      ) : (
-        /* CHAT MESSENGER VIEW MODE (WhatsApp style full width side-by-side) */
-        <div className="flex-1 flex overflow-hidden min-h-0 bg-slate-100 dark:bg-slate-950">
+      {/* CHAT MESSENGER PANEL (WhatsApp style split-pane on PC) */}
+      <div className={`flex-1 flex overflow-hidden min-h-0 bg-slate-100 dark:bg-slate-950 ${
+        chatViewMode === 'messages' ? 'flex' : 'hidden lg:flex'
+      }`}>
           
           {/* LEFT PANEL: Chat rooms list */}
-          <div className={`w-full md:w-[350px] lg:w-[380px] border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full shrink-0 ${activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`w-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full shrink-0 ${activeDMMember ? 'hidden' : 'flex'}`}>
             {/* Rooms list header */}
             <div className="p-4 bg-slate-50 dark:bg-slate-950/40 border-b border-slate-150 dark:border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -2438,7 +2520,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setChatViewMode('timeline');
                     onToast('Returning to Forum Feed timeline...');
                   }}
-                  className="p-1.5 -ml-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  className="lg:hidden p-1.5 -ml-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all cursor-pointer flex items-center justify-center shrink-0"
                   title="Back to Feed"
                 >
                   <ArrowLeft className="w-4 h-4 text-slate-700 dark:text-slate-300" />
@@ -2582,7 +2664,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
 
           {/* RIGHT PANEL: Chat conversation room pane */}
-          <div className={`flex-1 bg-[#eae6df] dark:bg-slate-950 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#1e293b_1.5px,transparent_1.5px)] [background-size:20px_20px] flex flex-col h-full relative ${!activeDMMember ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`flex-1 bg-[#eae6df] dark:bg-slate-950 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#1e293b_1.5px,transparent_1.5px)] [background-size:20px_20px] flex flex-col h-full relative ${!activeDMMember ? 'hidden' : 'flex'}`}>
             {activeDMMember ? (
               (() => {
                 const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
@@ -2597,7 +2679,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <button 
                           type="button"
                           onClick={() => setActiveDMMember(null)}
-                          className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer"
+                          className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer flex items-center justify-center"
                           title="Back to conversations list"
                         >
                           <ArrowLeft className="w-5 h-5" />
@@ -2652,7 +2734,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               // Double tap detection
                               const now = Date.now();
                               if (now - lastTouchTap.current < 280) {
-                                handleToggleHeart(chatIdToUse, m.id);
+                                handleAddReaction(chatIdToUse, m.id, '❤️');
                                 if (navigator.vibrate) navigator.vibrate(40);
                               }
                               lastTouchTap.current = now;
@@ -2754,7 +2836,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               title="Swipe right to reply, hold for options!"
                               onDoubleClick={(e) => {
                                 e.stopPropagation();
-                                handleToggleHeart(chatIdToUse, m.id);
+                                handleAddReaction(chatIdToUse, m.id, '❤️');
                               }}
                             >
                               {/* Tail Pointer */}
@@ -2827,12 +2909,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 </div>
                               )}
 
-                              {/* Heart Overlay */}
-                              {m.hearted && (
-                                <div className={`absolute -bottom-2.5 ${isMe ? '-left-2' : '-right-2'} bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-950/50 rounded-full p-1 shadow-xs animate-pulse flex items-center justify-center`}>
-                                  <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
-                                </div>
-                              )}
+
 
                               {/* Footer Timestamp & Checkmarks */}
                               <div className={`flex items-center justify-end gap-1.5 mt-1.5 text-[8.5px] font-bold ${isMe ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -2879,24 +2956,38 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Chat Input Bar */}
                     <form 
                       onSubmit={handleSendDM}
-                      className="p-3 border-t border-slate-200 dark:border-slate-800 bg-[#f0f2f5] dark:bg-slate-900 flex items-center gap-2 shrink-0"
+                      className="p-3 border-t border-slate-200 dark:border-slate-800 bg-[#f0f2f5] dark:bg-slate-900 flex items-end gap-2 shrink-0"
                     >
-                      <input
-                        type="text"
+                      <textarea
+                        ref={dmTextareaRef}
                         required
+                        rows={1}
                         placeholder="Type a message... (use @ to mention)"
                         value={activeDMInput}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            const form = e.currentTarget.form;
+                            if (form) {
+                              form.requestSubmit();
+                            }
+                          }
+                        }}
                         onChange={(e) => {
                           const val = e.target.value;
                           setActiveDMInput(val);
                           checkMentionTrigger(val, 'dm');
+                          
+                          // Auto expand logic
+                          e.target.style.height = 'auto';
+                          e.target.style.height = `${Math.min(120, Math.max(38, e.target.scrollHeight))}px`;
                         }}
-                        className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-slate-300 dark:focus:border-slate-700 rounded-lg px-4 py-2 text-xs font-semibold focus:outline-none text-slate-900 dark:text-slate-100 transition-all shadow-inner"
+                        className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-slate-300 dark:focus:border-slate-700 rounded-lg px-4 py-2.5 text-xs font-semibold focus:outline-none text-slate-900 dark:text-slate-100 transition-all shadow-inner resize-none overflow-y-auto min-h-[38px] max-h-28 leading-[18px]"
                       />
 
                       <button 
                         type="submit"
-                        className="p-2.5 rounded-full text-white bg-blue-600 hover:bg-blue-750 active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer shrink-0"
+                        className="p-2.5 rounded-full text-white bg-blue-600 hover:bg-blue-750 active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer shrink-0 mb-0.5"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -2943,14 +3034,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               onClick={() => {
                                 const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
                                 if (targetMsg) {
-                                  handleToggleHeart(chatIdToUse, targetMsg.id);
+                                  handleAddReaction(chatIdToUse, targetMsg.id, '❤️');
                                 }
                                 setActiveContextMenu(null);
                               }}
                               className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
                             >
                               <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
-                              <span>Heart Message</span>
+                              <span>React with ❤️</span>
                             </button>
 
                             <button
@@ -2968,6 +3059,33 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               <Copy className="w-4 h-4 text-amber-500" />
                               <span>Copy Text</span>
                             </button>
+
+                            {/* Delete Message if user's own, <= 30 mins, and has no replies */}
+                            {(() => {
+                              const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
+                              if (!targetMsg) return null;
+                              
+                              const isOwn = targetMsg.senderId === myId || targetMsg.sender === 'me';
+                              const isRecent = targetMsg.timestamp && (Date.now() - targetMsg.timestamp) < (30 * 60 * 1000);
+                              const hasReplies = rtdbMessages.some(m => m.replyTo && m.replyTo.id === targetMsg.id);
+                              
+                              if (isOwn && isRecent && !hasReplies) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDeleteMessage(chatIdToUse, targetMsg.id);
+                                      setActiveContextMenu(null);
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/25 text-xs font-bold text-red-650 dark:text-red-400 flex items-center gap-2 cursor-pointer transition-colors border border-transparent hover:border-red-200/50"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                    <span>Delete Message</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
 
@@ -3009,7 +3127,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* DETAILED STUDENT BIO MODAL overlay */}
       {bioProfile && (

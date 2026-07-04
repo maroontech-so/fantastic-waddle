@@ -16,6 +16,7 @@ export interface User {
   contributions?: number;
   learningCount?: number;
   engagementCount?: number;
+  unlockedAchievements?: string[];
 }
 
 export type NoticeCategory = 'blue' | 'emerald' | 'purple';

@@ -28,7 +28,8 @@ import {
   X,
   ChevronRight,
   Award,
-  Layers
+  Layers,
+  Save
 } from 'lucide-react';
 import tutorialData from '../tutorial.json';
 import { getTemplateForTopic, getAllLessonsFromTutorial } from '../utils/tutorialSandbox';
@@ -50,6 +51,7 @@ interface EditorViewProps {
   onToast: (msg: string) => void;
   initialCode?: { html: string; css: string; js: string; title: string } | null;
   onClearInitialCode?: () => void;
+  onRewardXP?: (amount: number, type: 'checkin' | 'engagement' | 'learning' | 'contribution', description: string) => void;
 }
 
 const TEMPLATES = [
@@ -230,7 +232,7 @@ const customHtml = htmlLanguage.data.of({ autocomplete: htmlCompletions });
 const customCss = cssLanguage.data.of({ autocomplete: cssCompletions });
 const customJs = javascriptLanguage.data.of({ autocomplete: jsCompletions });
 
-export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, onClearInitialCode }) => {
+export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, onClearInitialCode, onRewardXP }) => {
   const [activeTab, setActiveTab] = useState<'html' | 'css' | 'js'>('html');
   const [htmlCode, setHtmlCode] = useState(() => {
     const saved = localStorage.getItem('advocode_ide_progress');
@@ -379,6 +381,9 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
     setSavedSnippets(updated);
     localStorage.setItem('mku_snippets', JSON.stringify(updated));
     onToast(`✓ "${title}" saved to local Workspace`);
+    if (onRewardXP) {
+      onRewardXP(15, 'contribution', `Saved playground project: ${title}`);
+    }
   };
 
   const handleLoadSnippet = (s: SavedSnippet) => {
@@ -524,6 +529,9 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
       await addDoc(collection(db, "posts"), cleanForFirestore(newPostData));
       onToast('✓ Project successfully published to the Firestore Engagement Hub timeline!');
       setIsShareModalOpen(false);
+      if (onRewardXP) {
+        onRewardXP(30, 'contribution', `Published project: ${title}`);
+      }
     } catch (err: any) {
       console.error("Error publishing project:", err);
       onToast(`Error publishing: ${err.message}`);
@@ -609,69 +617,127 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
       <div className={`flex-1 flex flex-col h-full bg-white border-r border-slate-200/80 ${mobileView === 'preview' ? 'hidden md:flex' : 'flex'}`}>
         
         {/* IDE Top Controls Toolbar */}
-        <header className="px-4 py-3 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md shadow-blue-500/10">
-              <Terminal className="w-4.5 h-4.5" />
+        <header className="px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+          {/* Desktop Toolbar (visible sm and up) */}
+          <div className="hidden sm:flex sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md shadow-blue-500/10">
+                <Terminal className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="font-bold text-[11px] text-slate-500 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none w-28 hover:text-slate-800 transition-colors"
+                  placeholder="Name project..."
+                />
+              </div>
             </div>
-            <div>
-             
+
+            {/* Syllabus Starter Labs Button */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSyllabusDrawerOpen(true)}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-md shadow-blue-500/15 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                title="Browse 100+ Syllabus Starter Labs"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Syllabus Labs & Starters</span>
+              </button>
+            </div>
+
+            {/* Global compiler controls */}
+            <div className="flex items-center justify-end gap-1.5 shrink-0">
+              <button
+                onClick={handleSave}
+                className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-3 py-1.5 text-[10.5px] font-extrabold shadow-sm items-center gap-1.5 transition-all cursor-pointer active:scale-95 border border-slate-800"
+                title="Save project to workspace"
+              >
+                Save App
+              </button>
+
+              <button
+                onClick={handleOpenShareModal}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl p-2 text-xs font-extrabold flex items-center gap-1 transition-all cursor-pointer active:scale-95 border border-blue-100/50"
+                title="Share project to Hub timeline"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleClear}
+                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl cursor-pointer transition-all animate-fade-in"
+                title="Reset buffers"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Toolbar (visible under sm) */}
+          <div className="flex sm:hidden items-center justify-between gap-2 w-full">
+            {/* Left side title */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center shadow-md shrink-0">
+                <Terminal className="w-3.5 h-3.5" />
+              </div>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="font-bold text-[11px] text-slate-500 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none w-28 hover:text-slate-800 transition-colors"
-                placeholder="Name project..."
+                className="font-bold text-[11px] text-slate-700 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none w-20 hover:text-slate-800 transition-colors truncate"
+                placeholder="Project..."
               />
             </div>
-          </div>
 
-          {/* Syllabus Starter Labs Button */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsSyllabusDrawerOpen(true)}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-md shadow-blue-500/15 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-              title="Browse 100+ Syllabus Starter Labs"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Syllabus Labs & Starters</span>
-            </button>
-          </div>
+            {/* Flat horizontal controls flex with icons only, no words */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Play / Run Preview */}
+              <button
+                onClick={handleMobileRun}
+                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                title="Execute Code for Preview"
+              >
+                <Play className="w-3.5 h-3.5 fill-white text-white" />
+              </button>
 
-          {/* Global compiler controls */}
-          <div className="flex items-center justify-end gap-1.5 shrink-0">
-            {/* Run Button (Mobile visible only - Desktop auto-runs or shows Play) */}
-            <button
-              onClick={handleMobileRun}
-              className="md:hidden bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-1.5 text-xs font-bold shadow-md shadow-blue-500/15 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Execute Code for Preview"
-            >
-              <Play className="w-3.5 h-3.5 fill-white text-white" /> Run Preview
-            </button>
+              {/* Syllabus & Starter */}
+              <button
+                onClick={() => setIsSyllabusDrawerOpen(true)}
+                className="p-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                title="Browse Syllabus Starter Labs"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </button>
 
-            <button
-              onClick={handleSave}
-              className="hidden sm:flex bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-3 py-1.5 text-[10.5px] font-extrabold shadow-sm items-center gap-1.5 transition-all cursor-pointer active:scale-95 border border-slate-800"
-              title="Save project to workspace"
-            >
-              Save App
-            </button>
+              {/* Save App */}
+              <button
+                onClick={handleSave}
+                className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                title="Save project to workspace"
+              >
+                <Save className="w-3.5 h-3.5" />
+              </button>
 
-            <button
-              onClick={handleOpenShareModal}
-              className="bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl p-2 text-xs font-extrabold flex items-center gap-1 transition-all cursor-pointer active:scale-95 border border-blue-100/50"
-              title="Share project to Hub timeline"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
+              {/* Share */}
+              <button
+                onClick={handleOpenShareModal}
+                className="p-2 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                title="Share project to Hub timeline"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
 
-            <button
-              onClick={handleClear}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl cursor-pointer transition-all"
-              title="Reset buffers"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+              {/* Reset / Clear */}
+              <button
+                onClick={handleClear}
+                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                title="Reset buffers"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </header>
 

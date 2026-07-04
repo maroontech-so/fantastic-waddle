@@ -21,6 +21,8 @@ import {
   INITIAL_CHANNELS,
   INITIAL_CHAT_HISTORY,
 } from './data';
+import { getLevel, checkStaticAchievements, checkCodeAchievements } from './data/achievements';
+
 
 interface ToastItem {
   id: string;
@@ -43,6 +45,14 @@ export default function App() {
   useEffect(() => {
     sessionStorage.setItem('advocode_current_view', currentView);
   }, [currentView]);
+
+  const [viewedProfile, setViewedProfile] = useState<User | null>(null);
+  const [chatViewModeState, setChatViewModeState] = useState<'timeline' | 'messages'>('timeline');
+
+  const handleNavigate = (view: string) => {
+    setViewedProfile(null);
+    setCurrentView(view);
+  };
 
   const [initialDMUserUid, setInitialDMUserUid] = useState<string | null>(null);
   const [scannedProfileUid, setScannedProfileUid] = useState<string | null>(null);
@@ -67,6 +77,75 @@ export default function App() {
       window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
+
+  // Automated, real-time working Achievement System and XP rewards
+  useEffect(() => {
+    if (!user) return;
+    
+    const currentUnlocks = user.unlockedAchievements || [];
+    
+    // Get static metric achievements
+    const staticUnlocks = checkStaticAchievements(user);
+    
+    // Get real-time playground code achievements
+    let codeUnlocks: string[] = [];
+    try {
+      const ideSaved = localStorage.getItem('advocode_ide_progress');
+      if (ideSaved) {
+        const parsed = JSON.parse(ideSaved);
+        codeUnlocks = checkCodeAchievements(parsed.html || '', parsed.css || '', parsed.js || '');
+      }
+    } catch (e) {}
+    
+    // Merge potential unlocks
+    const allEligible = Array.from(new Set([...staticUnlocks, ...codeUnlocks]));
+    const newlyUnlocked = allEligible.filter(achName => !currentUnlocks.includes(achName));
+    
+    if (newlyUnlocked.length > 0) {
+      const bonusXP = newlyUnlocked.length * 50;
+      const updatedXP = (user.xp || 0) + bonusXP;
+      const updatedLevel = getLevel(updatedXP);
+      const updatedUnlocks = [...currentUnlocks, ...newlyUnlocked];
+      
+      const updatedUser: User = {
+        ...user,
+        xp: updatedXP,
+        level: updatedLevel,
+        unlockedAchievements: updatedUnlocks
+      };
+      
+      setUser(updatedUser);
+      sessionStorage.setItem('advocode_user', JSON.stringify(updatedUser));
+      if (updatedUser.uid || auth.currentUser?.uid) {
+        setDoc(doc(db, "users", updatedUser.uid || auth.currentUser!.uid), cleanForFirestore(updatedUser), { merge: true })
+          .catch(err => console.error("Firestore achievements sync error:", err));
+      }
+      
+      newlyUnlocked.forEach((ach, index) => {
+        setTimeout(() => {
+          triggerToast(`🏆 ACHIEVEMENT UNLOCKED: "${ach}"! +50 Bonus XP!`);
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+            osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+            osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3); // C6
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+          } catch (e) {}
+        }, index * 1200);
+      });
+    }
+  }, [user]);
+
+
   const [notices, setNotices] = useState<Notice[]>(INITIAL_NOTICES);
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
   const [folders, setFolders] = useState<LibraryFolder[]>(INITIAL_FOLDERS);
@@ -406,8 +485,8 @@ export default function App() {
       const currentXP = prev.xp || 0;
       const nextXP = currentXP + amount;
       
-      const currentLevel = prev.level || 1;
-      const nextLevel = Math.floor(nextXP / 100) + 1;
+      const currentLevel = getLevel(currentXP);
+      const nextLevel = getLevel(nextXP);
       
       const isLevelUp = nextLevel > currentLevel;
       
@@ -424,6 +503,7 @@ export default function App() {
         learningCount: type === 'learning' ? learningCount + 1 : learningCount,
         engagementCount: type === 'engagement' ? engagementCount + 1 : engagementCount,
       };
+
       
       sessionStorage.setItem('advocode_user', JSON.stringify(updated));
       if (updated.uid || auth.currentUser?.uid) {
@@ -683,7 +763,7 @@ export default function App() {
             isOpen={isMobileDrawerOpen}
             onClose={() => setIsMobileDrawerOpen(false)}
             currentView={currentView}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             user={user}
             onSignOut={handleSignOut}
             onToast={triggerToast}
@@ -693,7 +773,7 @@ export default function App() {
           {/* Desktop Navigation Drawer Sidebar */}
           <Sidebar
             currentView={currentView}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             user={user}
             onSignOut={handleSignOut}
             onToast={triggerToast}
@@ -751,6 +831,7 @@ export default function App() {
                   files={files}
                   onAddFile={handleAddFile}
                   onToast={triggerToast}
+                  onRewardXP={handleRewardXP}
                   onTryCode={(code) => {
                     setEditorInitialCode(code);
                     setCurrentView('editor');
@@ -770,6 +851,25 @@ export default function App() {
                   currentUser={user}
                   initialDMUserUid={initialDMUserUid}
                   onClearInitialDMUser={() => setInitialDMUserUid(null)}
+                  onViewProfile={(profile) => {
+                    const targetUser = allUsers.find(u => u.name === profile.name || u.email?.split('@')[0] === profile.name || u.uid === profile.id || u.uid === profile.uid) || {
+                      uid: profile.id || profile.name || String(Date.now()),
+                      name: profile.name,
+                      bio: profile.bio || profile.subtitle || 'MKU Student | Passionate Developer',
+                      skills: profile.skills || ['HTML5', 'CSS3', 'JavaScript'],
+                      avatarUrl: profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2563EB&color=fff`,
+                      coverUrl: profile.coverUrl || '',
+                      level: profile.level || 1,
+                      xp: profile.points || profile.xp || 50,
+                      streak: profile.streak || 1,
+                      regNumber: profile.regNo || '',
+                      email: '',
+                      role: 'student'
+                    };
+                    setViewedProfile(targetUser);
+                    setCurrentView('profile');
+                  }}
+                  onViewModeChange={setChatViewModeState}
                 />
               )}
 
@@ -778,29 +878,34 @@ export default function App() {
                   onToast={triggerToast}
                   initialCode={editorInitialCode}
                   onClearInitialCode={() => setEditorInitialCode(null)}
+                  onRewardXP={handleRewardXP}
                 />
               )}
 
               {currentView === 'profile' && (
                 <ProfileView
-                  user={user}
+                  user={viewedProfile || user}
                   onUpdateUser={handleUpdateUser}
                   onSignOut={handleSignOut}
                   onToast={triggerToast}
                   isDark={isDark}
                   onToggleTheme={toggleDarkMode}
+                  isReadOnly={!!viewedProfile && viewedProfile.uid !== user.uid}
+                  onBack={viewedProfile ? () => setViewedProfile(null) : undefined}
                 />
               )}
             </div>
 
             {/* Mobile Bottom Navigation Bar */}
-            <BottomNav
-              currentView={currentView}
-              onNavigate={setCurrentView}
-              user={user}
-              onSignOut={handleSignOut}
-              onToast={triggerToast}
-            />
+            {!(currentView === 'chat' && chatViewModeState === 'messages') && (
+              <BottomNav
+                currentView={currentView}
+                onNavigate={handleNavigate}
+                user={user}
+                onSignOut={handleSignOut}
+                onToast={triggerToast}
+              />
+            )}
           </div>
         </>
       )}

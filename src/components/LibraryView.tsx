@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Home, ChevronRight, ChevronLeft, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy } from 'lucide-react';
+import { Search, Home, ChevronRight, ChevronLeft, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy, ArrowLeft, Minus } from 'lucide-react';
 import { LibraryFolder, LibraryFile, FileType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import tutorialData from '../tutorial.json';
@@ -40,6 +40,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const [activeLessonIndex, setActiveLessonIndex] = useState<number>(0);
   const [isViewingCapstone, setIsViewingCapstone] = useState<boolean>(false);
   const [selectedPartIndex, setSelectedPartIndex] = useState<number>(0);
+  const [isViewingDocument, setIsViewingDocument] = useState<boolean>(false);
+  const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [expandedChapterIndex, setExpandedChapterIndex] = useState<number | null>(0);
   const [expandedTopicTitle, setExpandedTopicTitle] = useState<string | null>(null);
   const [syllabusSearch, setSyllabusSearch] = useState<string>('');
@@ -192,6 +194,329 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           </div>
         );
     }
+  };
+
+  const renderPdfReader = () => {
+    const current = allSyllabusLessons[activeLessonIndex];
+    
+    return (
+      <div className="flex flex-col bg-slate-700 dark:bg-slate-900 rounded-2xl border border-slate-600 dark:border-slate-800 shadow-xl overflow-hidden min-h-[85vh] animate-scale-in">
+        {/* PDF Reader Top Toolbar */}
+        <div className="bg-slate-800 text-slate-100 px-4 py-2 flex flex-wrap gap-3 items-center justify-between border-b border-slate-700 shrink-0 select-none">
+          {/* Back to Catalog */}
+          <button
+            onClick={() => setIsViewingDocument(false)}
+            className="flex items-center gap-1 text-xs font-bold text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-650 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Library Catalog</span>
+          </button>
+
+          {/* Document Title */}
+          <div className="hidden md:flex items-center gap-2 max-w-xs lg:max-w-md">
+            <span className="bg-red-600 text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded tracking-widest uppercase">
+              PDF
+            </span>
+            <span className="text-xs font-semibold text-slate-300 truncate">
+              {isViewingCapstone 
+                ? `AdvocoDe_Graduation_Portal.pdf` 
+                : `AdvocoDe_Syllabus_Lesson_${activeLessonIndex + 1}.pdf`
+              }
+            </span>
+          </div>
+
+          {/* Page Controls */}
+          <div className="flex items-center gap-1.5 bg-slate-900/60 px-2 py-1 rounded-lg">
+            <button
+              disabled={isViewingCapstone ? false : activeLessonIndex === 0}
+              onClick={() => {
+                if (isViewingCapstone) {
+                  setIsViewingCapstone(false);
+                  setActiveLessonIndex(allSyllabusLessons.length - 1);
+                } else {
+                  setActiveLessonIndex(prev => Math.max(0, prev - 1));
+                }
+              }}
+              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center"
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-[11px] font-mono text-slate-300 min-w-[90px] text-center">
+              Page {isViewingCapstone ? allSyllabusLessons.length + 1 : activeLessonIndex + 1} of {allSyllabusLessons.length + 1}
+            </span>
+            <button
+              disabled={isViewingCapstone}
+              onClick={() => {
+                if (activeLessonIndex === allSyllabusLessons.length - 1) {
+                  setIsViewingCapstone(true);
+                } else {
+                  setActiveLessonIndex(prev => Math.min(allSyllabusLessons.length - 1, prev + 1));
+                }
+              }}
+              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center"
+              title="Next Page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="hidden sm:flex items-center gap-1 bg-slate-900/60 px-2 py-1 rounded-lg text-xs">
+            <button
+              onClick={() => setPdfZoom(prev => Math.max(75, prev - 10))}
+              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="Zoom Out"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[10px] font-mono text-slate-300 w-10 text-center select-none">
+              {pdfZoom}%
+            </span>
+            <button
+              onClick={() => setPdfZoom(prev => Math.min(150, prev + 10))}
+              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="Zoom In"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            {!isViewingCapstone && (
+              <button
+                onClick={(e) => handleToggleMastered(current?.topic, e)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  masteredLessons.includes(current?.topic)
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                    : 'bg-slate-750 hover:bg-slate-650 text-slate-200 hover:text-white border border-slate-600'
+                }`}
+              >
+                <BookOpenCheck className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {masteredLessons.includes(current?.topic) ? 'Mastered' : 'Mark Mastered'}
+                </span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                if (isViewingCapstone) {
+                  onToast('Download Started: AdvocoDe_Capstone_Certificate.pdf');
+                } else {
+                  onToast(`Download Started: Lesson_${activeLessonIndex + 1}_Documentation.pdf`);
+                }
+              }}
+              className="p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Download Document"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* PDF Document Canvas (Grey scrollable space) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-650 dark:bg-slate-950/80 scrollbar-thin select-text">
+          {/* Document Sheet */}
+          <div 
+            className="w-full max-w-3xl bg-white text-slate-950 shadow-2xl rounded-sm p-8 sm:p-14 md:p-16 mx-auto min-h-[297mm] relative transition-transform duration-200 ease-out origin-top border border-slate-300/40 select-text"
+            style={{ 
+              transform: `scale(${pdfZoom / 100})`,
+              marginBottom: `${Math.max(0, (pdfZoom - 100) * 3)}px`
+            }}
+          >
+            {/* Watermark / Logo background */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.015] pointer-events-none select-none">
+              <img src="/logo.svg" className="w-96 h-96" alt="" />
+            </div>
+
+            {isViewingCapstone ? (
+              // Graduation Exam Layout
+              <div className="space-y-6">
+                {/* Exam header */}
+                <div className="border-b-4 border-amber-500 pb-4 flex flex-wrap justify-between items-end gap-3 select-none">
+                  <div>
+                    <h1 className="text-2xl font-serif font-black tracking-tight text-amber-600">
+                      GRADUATION EXAM PORTAL
+                    </h1>
+                    <p className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      ADVOCODE ACADEMY OF ADVANCED SOFTWARE ENGINEERING
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-bold px-2 py-1 rounded-full uppercase">
+                      FINAL CAPSTONE
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 font-semibold leading-relaxed border-l-2 border-slate-300 pl-3">
+                  This capstone section represents your culminating milestone at AdvocoDe. Below are the primary production assignments. Submit your graduation files to earn your Club Certificate.
+                </p>
+
+                <div className="space-y-8 pt-4">
+                  {tutorialData.course.parts[selectedPartIndex]?.projects?.map((project: any, pIdx: number) => (
+                    <div key={pIdx} className="border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+                      <div className="flex justify-between items-center select-none">
+                        <span className="bg-slate-100 text-slate-700 font-mono text-[9px] font-bold px-2 py-0.5 rounded border">
+                          PART_PROJECT_0{pIdx + 1}
+                        </span>
+                        <Award className="w-5 h-5 text-amber-500" />
+                      </div>
+                      
+                      <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+                        {project.name}
+                      </h3>
+
+                      <p className="text-slate-655 text-xs font-semibold leading-relaxed">
+                        {project.description}
+                      </p>
+
+                      <div className="pt-3 mt-3 border-t border-slate-100 space-y-3">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider select-none">
+                            Technical Requirements:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {project.tech_stack.split(',').map((tech: string, tIdx: number) => (
+                              <span key={tIdx} className="bg-slate-50 border text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded">
+                                {tech.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            const template = getTemplateForProject(project.name);
+                            if (onTryCode) {
+                              onTryCode({
+                                title: project.name,
+                                html: template.html,
+                                css: template.css,
+                                js: template.js,
+                              });
+                            }
+                          }}
+                          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition-all shadow-md hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer select-none"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                          <span>Bootstrap Exam Template in Sandbox</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Standard Lesson Page Document Layout
+              <div className="space-y-6">
+                {/* Document Header */}
+                <div className="border-b border-slate-200 pb-4 flex justify-between items-end select-none">
+                  <div>
+                    <span className="text-[9px] font-mono text-indigo-600 font-bold tracking-widest uppercase block">
+                      Course Document • Chapter {current?.chapterNumber}
+                    </span>
+                    <h1 className="text-xl sm:text-2xl font-serif font-black tracking-tight text-slate-900 mt-1">
+                      {current?.topic}
+                    </h1>
+                  </div>
+                  <div className="text-right font-mono text-[9px] text-slate-400 font-bold uppercase select-none">
+                    PART {current?.partNumber} • LESSON {activeLessonIndex + 1}
+                  </div>
+                </div>
+
+                {/* Subtitle / Details */}
+                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-lg flex gap-3 items-start select-none">
+                  <div className="bg-indigo-100 text-indigo-700 p-1.5 rounded-md shrink-0">
+                    <BookOpen className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h5 className="text-[11px] font-bold text-slate-450 uppercase tracking-wider">
+                      Module Title
+                    </h5>
+                    <p className="text-xs font-bold text-slate-800">
+                      {current?.chapterTitle}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Explanation text */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 select-none">
+                    1. Conceptual Overview
+                  </h3>
+                  <p className="text-slate-750 text-xs leading-relaxed font-serif pl-1">
+                    {current?.explanation}
+                  </p>
+                </div>
+
+                {/* Use Case */}
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 select-none">
+                    2. Core Application & Use Case
+                  </h3>
+                  <div className="bg-blue-50/50 border border-blue-100/60 p-4 rounded-xl leading-relaxed text-xs text-blue-900 font-serif">
+                    {current?.use_case}
+                  </div>
+                </div>
+
+                {/* Implementation Code */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-1 select-none">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      3. Sandbox Source Code
+                    </h3>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(current?.example);
+                        onToast('✓ Copied code example to clipboard');
+                      }}
+                      className="text-[10px] text-indigo-600 hover:text-indigo-850 font-bold px-2 py-0.5 rounded hover:bg-slate-100 transition-all cursor-pointer"
+                    >
+                      Copy Snippet
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 overflow-hidden font-mono text-[11px] bg-slate-900 text-slate-200 p-5 leading-relaxed relative animate-fade-in">
+                    <pre className="overflow-x-auto whitespace-pre-wrap break-all">{current?.example}</pre>
+                  </div>
+                </div>
+
+                {/* Bottom interactive action */}
+                <div className="pt-6 border-t border-slate-100 select-none flex flex-col sm:flex-row gap-3 justify-between items-center">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {masteredLessons.includes(current?.topic) 
+                      ? '✓ You have mastered this lesson!' 
+                      : 'Complete this lesson to advance your skills.'
+                    }
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (onTryCode) {
+                        onTryCode({
+                          title: current?.topic,
+                          html: current?.example.includes('<html>') || !current?.example.includes('function') ? current?.example : '<!-- HTML -->',
+                          css: '/* CSS styling */',
+                          js: current?.example.includes('function') || current?.example.includes('console.log') ? current?.example : '// JS logic',
+                        });
+                        onToast(`💻 Loaded "${current?.topic}" into the Sandbox Editor!`);
+                      }
+                    }}
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-750 text-white text-xs font-black px-5 py-2.5 rounded-xl transition-all shadow-md hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <BookOpen className="w-4.5 h-4.5" />
+                    <span>Run Example in Sandbox Editor</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -394,6 +719,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         </div>
       )}
         </>
+      ) : isViewingDocument ? (
+        renderPdfReader()
       ) : (
         <div className="space-y-6 animate-fade-in">
           {/* Dynamic Course Header Card with Mastered Progress */}
@@ -468,6 +795,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                           setActiveLessonIndex(lessonIdx);
                           setIsViewingCapstone(false);
                           setSyllabusSearch('');
+                          setIsViewingDocument(true);
                           onToast(`📖 Switched book to Page ${lessonIdx + 1}: ${item.topic}`);
                         }
                       }}
@@ -546,6 +874,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                             onClick={() => {
                               setSelectedPartIndex(pIdx);
                               setIsViewingCapstone(true);
+                              setIsViewingDocument(true);
                               onToast("🎓 Opened Graduation Exams & Capstone Projects");
                             }}
                             className={`w-full text-left p-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-between border ${
@@ -580,6 +909,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                             if (firstLessonOfPart !== -1) {
                               setActiveLessonIndex(firstLessonOfPart);
                             }
+                            setIsViewingDocument(true);
                             onToast(`Switched to Part ${part.part_number}: ${part.part_title}`);
                           }}
                           className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between border ${
@@ -631,6 +961,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                                               if (globalIdx !== -1) {
                                                 setActiveLessonIndex(globalIdx);
                                                 setIsViewingCapstone(false);
+                                                setIsViewingDocument(true);
                                               }
                                             }}
                                             className={`w-full text-left py-1.5 px-2 rounded-lg text-[10px] font-semibold transition-all flex items-center justify-between gap-1.5 ${
