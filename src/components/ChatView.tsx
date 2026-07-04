@@ -47,6 +47,67 @@ import { ref, onValue, push, set, onDisconnect, serverTimestamp } from 'firebase
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
 
+export const getRelativeTimeString = (timeMsOrStr: number | string | any): string => {
+  if (!timeMsOrStr) return 'Just now';
+  let timestamp: number;
+  
+  if (timeMsOrStr && typeof timeMsOrStr === 'object') {
+    if (typeof timeMsOrStr.toDate === 'function') {
+      timestamp = timeMsOrStr.toDate().getTime();
+    } else if (typeof timeMsOrStr.seconds === 'number') {
+      timestamp = timeMsOrStr.seconds * 1000;
+    } else if (timeMsOrStr instanceof Date) {
+      timestamp = timeMsOrStr.getTime();
+    } else {
+      return 'Just now';
+    }
+  } else if (typeof timeMsOrStr === 'number') {
+    timestamp = timeMsOrStr;
+  } else {
+    const str = String(timeMsOrStr).trim();
+    if (
+      str.includes('ago') || 
+      str.toLowerCase() === 'yesterday' || 
+      str.toLowerCase() === 'now' || 
+      str.toLowerCase() === 'mon' || 
+      str.toLowerCase() === 'tue' || 
+      str.toLowerCase() === 'wed' || 
+      str.toLowerCase() === 'thu' || 
+      str.toLowerCase() === 'fri' || 
+      str.toLowerCase() === 'sat' || 
+      str.toLowerCase() === 'sun' || 
+      str.toLowerCase() === 'last week' ||
+      str.toLowerCase() === '2 weeks ago'
+    ) {
+      return str;
+    }
+    
+    timestamp = Date.parse(str);
+    if (isNaN(timestamp)) {
+      return str;
+    }
+  }
+  
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  if (diffMs < 0) return 'Just now';
+
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return 'Just now';
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+
+  return new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
 export const DYNAMIC_POST_PROMPTS = [
   "Got a bug you're wrestling with?",
   "Wanna ask a coding question?",
@@ -891,9 +952,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
     try {
       for (const p of DEFAULT_POSTS) {
         const { id, ...postData } = p;
+        let timeOffset = 0;
+        if (p.time.includes('3 hours')) {
+          timeOffset = 3 * 3600000;
+        } else if (p.time.toLowerCase().includes('yesterday')) {
+          timeOffset = 24 * 3600000;
+        } else if (p.time.toLowerCase().includes('2 days')) {
+          timeOffset = 48 * 3600000;
+        } else if (p.time.toLowerCase().includes('3 days')) {
+          timeOffset = 72 * 3600000;
+        } else {
+          timeOffset = Math.floor(Math.random() * 3600000);
+        }
         await addDoc(collection(db, "posts"), {
           ...postData,
-          timeMs: Date.now() - Math.floor(Math.random() * 3600000)
+          timeMs: Date.now() - timeOffset
         });
       }
       onToast("Seeded sample community posts to Firestore!");
@@ -955,6 +1028,70 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     try {
       await addDoc(collection(db, "posts"), cleanForFirestore(newPostData));
+
+      // Dispatch announcement/event broadcast email to all active member emails
+      if (composeCategory === 'event' || composeCategory === 'announcement') {
+        const emails = allUsers ? allUsers.map(u => u.email).filter(Boolean) : [];
+        if (emails.length > 0) {
+          try {
+            const typeLabel = composeCategory === 'event' ? 'New Event Alert' : 'Important Announcement';
+            const header = composeTitle.trim() || 'New Community Update';
+            const content = composeText.trim();
+            const detailHtml = composeCategory === 'event' 
+              ? `<div style="background-color: #f1f5f9; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #2563eb;">
+                  <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>📅 Date:</strong> ${eventDate || 'TBA'}</p>
+                  <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>⏰ Time:</strong> ${eventTime || 'TBA'}</p>
+                  <p style="margin: 0; font-size: 13px;"><strong>📍 Venue:</strong> ${eventVenue || 'TBA'}</p>
+                 </div>` 
+              : '';
+
+            fetch('/api/send-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                to: emails,
+                subject: `[</AdvocoDe> Network] ${typeLabel}: ${header}`,
+                html: `
+                  <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #334155; background-color: #f8fafc; border-radius: 16px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                      <p style="color: #2563eb; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 0 0;">Defend. Develop. Dominate.</p>
+                    </div>
+                    
+                    <div style="background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid #e2e8f0;">
+                      <span style="display: inline-block; background-color: ${composeCategory === 'event' ? '#dbeafe' : '#fef3c7'}; color: ${composeCategory === 'event' ? '#1e40af' : '#92400e'}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; margin-bottom: 12px;">${typeLabel}</span>
+                      <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px;">${header}</h1>
+                      <p style="font-size: 14px; line-height: 1.6; color: #475569; white-space: pre-line; margin-bottom: 16px;">${content}</p>
+                      ${detailHtml}
+                      
+                      <div style="text-align: center; margin: 32px 0 16px 0;">
+                        <a href="https://advocade.studenthubmku.xyz" style="background-color: #2563eb; color: #ffffff; font-weight: 600; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-size: 13px; display: inline-block;">View in Hub Dashboard</a>
+                      </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #94a3b8;">
+                      <p style="margin: 0 0 8px 0;">AdvocoDe Developer Organization &bull; Mount Kenya University</p>
+                      <p style="margin: 0;">You received this as a member of Mount Kenya University IT Club.</p>
+                    </div>
+                  </div>
+                `
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              console.log("Broadcast email dispatch success:", data);
+              onToast(`Broadcast notification emailed to ${emails.length} active member(s)!`);
+            })
+            .catch(err => {
+              console.error("Resend broadcast API call failed:", err);
+            });
+          } catch (broadcastErr) {
+            console.error("Resend broadcast processing failed:", broadcastErr);
+          }
+        }
+      }
+
       setComposeText('');
       setComposeTitle('');
       setComposeCode('');
@@ -1229,14 +1366,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 />
               </button>
               
-              <div className="flex flex-col">
-                <h1 className="font-extrabold text-sm md:text-base tracking-tight text-slate-900 font-mono">
-                  &lt;/AdvocoDe&gt;
-                </h1>
-                <p className="text-[9px] text-blue-600 font-extrabold tracking-wider uppercase font-mono">
-                  Defend. Develop. Dominate.
-                </p>
-              </div>
             </div>
 
             {/* Minimalistic clean X-style search filter & message button */}
@@ -1547,7 +1676,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
                           <span className={`mx-1.5 text-xs font-normal ${post.type === 'announcement' ? 'text-blue-200' : 'text-slate-300'}`}>•</span>
                           <span className={`text-xs font-normal shrink-0 ${post.type === 'announcement' ? 'text-blue-100' : 'text-slate-400'}`}>
-                            {post.time}
+                            {getRelativeTimeString(post.timeMs || post.time)}
                           </span>
                         </div>
 

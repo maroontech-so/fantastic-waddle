@@ -157,4 +157,15 @@ html.dark .shadow-xl {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
+/* Custom Accessibility Font Sizing */
+.text-scale-normal {
+  font-size: 14px;
+}
+.text-scale-large {
+  font-size: 16.5px;
+}
+.text-scale-larger {
+  font-size: 19px;
+}
+
 

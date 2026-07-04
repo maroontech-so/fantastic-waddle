@@ -41,6 +41,20 @@ export default function App() {
   useEffect(() => {
     sessionStorage.setItem('advocode_current_view', currentView);
   }, [currentView]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const actUid = params.get('uid');
+    if (actUid) {
+      triggerToast('🎉 Account successfully activated! Welcome to </AdvocoDe> Network.');
+      setDoc(doc(db, "users", actUid), { activated: true }, { merge: true })
+        .then(() => console.log("User profile updated as activated."))
+        .catch(err => console.error("Error activating account:", err));
+      
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
   const [notices, setNotices] = useState<Notice[]>(INITIAL_NOTICES);
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
   const [folders, setFolders] = useState<LibraryFolder[]>(INITIAL_FOLDERS);
@@ -94,8 +108,18 @@ export default function App() {
   // Auth form states
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
   const [authName, setAuthName] = useState('');
   const [authRegNumber, setAuthRegNumber] = useState('');
+  const [textSize, setTextSize] = useState<'normal' | 'large' | 'larger'>(() => {
+    return (localStorage.getItem('advocode_text_size') as any) || 'normal';
+  });
+
+  const handleTextSizeChange = (size: 'normal' | 'large' | 'larger') => {
+    setTextSize(size);
+    localStorage.setItem('advocode_text_size', size);
+    triggerToast(`Font scale adjusted to ${size}`);
+  };
 
   // Toast Notification Trigger
   const triggerToast = (message: string) => {
@@ -230,6 +254,11 @@ export default function App() {
       return;
     }
 
+    if (!isLoginMode && authPassword !== authConfirmPassword) {
+      triggerToast('❌ Passwords do not match! Please check and try again.');
+      return;
+    }
+
     setAuthLoading(true);
     try {
       if (isLoginMode) {
@@ -289,9 +318,64 @@ export default function App() {
         await setDoc(doc(db, "users", fbUser.uid), cleanForFirestore(newUserProfile), { merge: true });
         setUser(newUserProfile);
         triggerToast(`Welcome to </AdvocoDe>, ${newUserProfile.name}! +50 XP!`);
+
+        // Send confirmation email via our backend proxy
+        const activationLink = `https://advocade.studenthubmku.xyz?uid=${fbUser.uid}`;
+        try {
+          fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              to: authEmail,
+              subject: 'Activate your </AdvocoDe> Account',
+              html: `
+                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #334155; background-color: #f8fafc; border-radius: 16px;">
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; background-color: #2563eb; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+                      <img src="https://advocade.studenthubmku.xyz/logo.svg" style="width: 48px; height: 48px; filter: brightness(0) invert(1);" alt="AdvocoDe logo" />
+                    </div>
+                    <h2 style="font-size: 24px; font-weight: 800; color: #1e293b; margin: 0; font-family: monospace;">&lt;/AdvocoDe&gt;</h2>
+                    <p style="color: #2563eb; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 0 0;">Defend. Develop. Dominate.</p>
+                  </div>
+                  
+                  <div style="background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid #e2e8f0;">
+                    <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px;">Welcome to the Developer Network!</h1>
+                    <p style="font-size: 14px; line-height: 1.6; margin-bottom: 24px;">Hi ${authName.trim() || authEmail.split('@')[0]},</p>
+                    <p style="font-size: 14px; line-height: 1.6; margin-bottom: 24px;">Thank you for requesting to join the <strong>&lt;/AdvocoDe&gt; Network</strong>! We are excited to have you as part of our exclusive elite community of student developers.</p>
+                    <p style="font-size: 14px; line-height: 1.6; margin-bottom: 24px;">To finalize your registration and activate your student developer account, please click the verification button below:</p>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                      <a href="${activationLink}" style="background-color: #2563eb; color: #ffffff; font-weight: 600; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">Activate Account</a>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 0;">If the button doesn't work, copy and paste this link into your browser:<br/><a href="${activationLink}" style="color: #2563eb; text-decoration: underline;">${activationLink}</a></p>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #94a3b8;">
+                    <p style="margin: 0 0 8px 0;">AdvocoDe Developer Organization &bull; Mount Kenya University</p>
+                    <p style="margin: 0;">If you didn't request this email, you can safely ignore it.</p>
+                  </div>
+                </div>
+              `
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            console.log("Welcome / activation email sent:", data);
+            triggerToast('📧 Activation link sent! Check your email to verify and activate.');
+          })
+          .catch(err => {
+            console.error("Resend welcome email failed:", err);
+          });
+        } catch (emailErr) {
+          console.error("Email API fetch failed:", emailErr);
+        }
       }
       setAuthEmail('');
       setAuthPassword('');
+      setAuthConfirmPassword('');
       setAuthName('');
       setAuthRegNumber('');
     } catch (err: any) {
@@ -422,16 +506,16 @@ export default function App() {
   };
 
   return (
-    <div className="antialiased text-slate-900 flex h-screen w-full bg-slate-50 overflow-hidden font-sans">
+    <div className={`antialiased text-slate-900 flex h-screen w-full bg-slate-50 overflow-hidden font-sans ${textSize === 'large' ? 'text-scale-large' : textSize === 'larger' ? 'text-scale-larger' : 'text-scale-normal'}`}>
       
       {/* 1. SPLASH SCREEN (Mounts if splashActive is true) */}
       {splashActive && (
         <div className="fixed inset-0 z-[100] flex flex-col justify-center items-center bg-slate-900 transition-opacity duration-300">
-          <div className="w-24 h-24 bg-blue-600 rounded-3xl shadow-lg flex items-center justify-center mb-6 animate-pulse">
-            <Code2 className="w-12 h-12 text-white" />
+          <div className="w-30 h-27 bg-blue-600 rounded-3xl shadow-lg flex items-center justify-center mb-6 animate-pulse">
+            <img src="/logo.svg" width="24px" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white font-mono">&lt;/AdvocoDe&gt;</h1>
-          <p className="text-blue-400 mt-3 font-bold text-base tracking-wide font-mono uppercase">Defend. Develop. Dominate.</p>
+          <h1 className="text-4xl font-light tracking-tight text-white font-mono">&lt;/AdvocoDe&gt;</h1>
+          <p className="text-blue-400 mt-3 font-light text-sm tracking-wide font-mono uppercase">Defend. Develop. Dominate.</p>
         </div>
       )}
 
@@ -439,62 +523,65 @@ export default function App() {
       {!user && !splashActive && (
         <div className="fixed inset-0 z-[90] bg-slate-50 overflow-y-auto">
           <div className="flex flex-col justify-center min-h-screen px-6 sm:px-12 md:max-w-md md:mx-auto py-8">
-            <div className="mb-10 text-center md:text-left mt-4">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl shadow-md flex items-center justify-center mb-6 mx-auto md:mx-0">
-                <Code2 className="w-8 h-8 text-white" />
+            
+           
+
+            <div className="mb-8 text-center mt-2">
+              <div className="w-30 h-26 bg-blue-600 rounded-3xl shadow-md flex items-center justify-center mb-5 mx-auto">
+                <img src="/logo.svg" className="w-24 h-24 object-contain brightness-0 invert" alt="AdvocoDe logo" />
               </div>
-              <h1 className="text-3xl font-extrabold mb-2 text-slate-900 tracking-tight font-display">
+              <h1 className="text-2xl font-light mb-1.5 text-slate-850 tracking-tight font-display">
                 {isLoginMode ? 'Welcome Back' : 'Create Account'}
               </h1>
-              <p className="text-slate-600 font-medium">
-                {isLoginMode ? 'Sign in to access your developer network.' : 'Join </AdvocoDe> developer network.'}
+              <p className="text-slate-400 font-light text-xs">
+                {isLoginMode ? 'Sign in to access your developer network.' : 'Join the </AdvocoDe> developer network.'}
               </p>
             </div>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-3xl shadow-soft border border-slate-200">
+            <form onSubmit={handleAuthSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
               {/* Google Sign In Button */}
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={authLoading}
-                className="w-full bg-white text-slate-700 font-bold py-3.5 px-4 rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 transition-all active:scale-95 flex justify-center items-center gap-3 mb-2 cursor-pointer disabled:opacity-70"
+                className="w-full bg-slate-50/30 text-slate-500 font-light py-2.5 px-4 rounded-xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-all active:scale-95 flex justify-center items-center gap-3 mb-1 cursor-pointer disabled:opacity-70"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.3 8.9 5 12 5z"/>
                   <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
                   <path fill="#FBBC05" d="M5.3 14.8c-.2-.7-.3-1.5-.3-2.3s.1-1.5.3-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.7-2.8z"/>
                   <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.2L1.6 15.9C3.5 19.7 7.4 23 12 23z"/>
                 </svg>
-                <span>Continue with Google</span>
+                <span className="text-xs">Continue with Google</span>
               </button>
               
-              <div className="relative my-4 flex items-center justify-center">
-                <div className="border-t border-slate-200 w-full"></div>
-                <span className="bg-white px-3 text-[11px] text-slate-400 font-bold uppercase tracking-wider absolute">OR EMAIL</span>
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="border-t border-slate-100 w-full"></div>
+                <span className="bg-white px-2 text-[10px] text-slate-300 font-light uppercase tracking-wider absolute">OR EMAIL</span>
               </div>
 
               {/* Sign up details */}
               {!isLoginMode && (
                 <div className="space-y-4 animate-fade-in">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Full Name</label>
+                    <label className="block text-[11px] font-light text-slate-400 mb-1 uppercase tracking-wider">Full Name</label>
                     <input
                       required
                       type="text"
                       value={authName}
                       onChange={(e) => setAuthName(e.target.value)}
                       placeholder="Alex M."
-                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50/50 border border-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all text-xs font-light text-slate-600"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Unique Username (Optional - Random by default)</label>
+                    <label className="block text-[11px] font-light text-slate-400 mb-1 uppercase tracking-wider">Username</label>
                     <input
                       type="text"
                       value={authRegNumber}
                       onChange={(e) => setAuthRegNumber(e.target.value)}
-                      placeholder="e.g., @alex_dev (Auto-generated if empty)"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-mono"
+                      placeholder="e.g., @alex_dev"
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50/50 border border-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all text-xs font-light font-mono text-slate-600"
                     />
                   </div>
                 </div>
@@ -502,19 +589,19 @@ export default function App() {
 
               {/* Standard email/pass */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Email Address</label>
+                <label className="block text-[11px] font-light text-slate-400 mb-1 uppercase tracking-wider">Email Address</label>
                 <input
                   required
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="developer@advocode.io"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50/50 border border-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all text-xs font-light text-slate-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Password</label>
+                <label className="block text-[11px] font-light text-slate-400 mb-1 uppercase tracking-wider">Password</label>
                 <input
                   required
                   type="password"
@@ -522,35 +609,51 @@ export default function App() {
                   onChange={(e) => setAuthPassword(e.target.value)}
                   placeholder="••••••••"
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50/50 border border-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all text-xs font-light text-slate-600"
                 />
               </div>
+
+              {/* Confirm Password (signup only) */}
+              {!isLoginMode && (
+                <div className="animate-fade-in">
+                  <label className="block text-[11px] font-light text-slate-400 mb-1 uppercase tracking-wider">Confirm Password</label>
+                  <input
+                    required
+                    type="password"
+                    value={authConfirmPassword}
+                    onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    minLength={6}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50/50 border border-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white transition-all text-xs font-light text-slate-600"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-6 shadow-md hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2 disabled:opacity-80 disabled:cursor-not-allowed"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-light py-2.5 rounded-xl mt-5 shadow-sm transition-all active:scale-95 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-80"
               >
                 {authLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Authenticating...</span>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-xs">Authenticating...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isLoginMode ? 'Sign In' : 'Sign Up'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span className="text-xs font-light">{isLoginMode ? 'Sign In' : 'Sign Up'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
             </form>
 
-            <p className="text-center text-sm text-slate-600 mt-8 mb-8">
+            <p className="text-center text-xs text-slate-400 mt-6 mb-6 font-light">
               <span>{isLoginMode ? 'Not a member?' : 'Already a member?'}</span>
               <button
                 type="button"
                 onClick={() => setIsLoginMode(!isLoginMode)}
-                className="text-blue-600 font-bold ml-1.5 hover:text-blue-700 hover:underline transition-all cursor-pointer"
+                className="text-blue-500 font-light ml-1 hover:text-blue-600 hover:underline transition-all cursor-pointer"
               >
                 {isLoginMode ? 'Join the club' : 'Sign in'}
               </button>
@@ -610,21 +713,15 @@ export default function App() {
                     />
                   </div>
 
-                  <button
-                    onClick={toggleDarkMode}
-                    className="p-2 bg-white rounded-full shadow-sm border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
-                    title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-                  >
-                    {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
-                  </button>
-
-                  <button
-                    onClick={() => triggerToast('No new announcements')}
-                    className="relative p-2 bg-white rounded-full shadow-sm border border-slate-200 hover:bg-slate-100 transition-colors"
-                  >
-                    <Bell className="w-5 h-5 text-slate-900" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                  </button>
+                  {currentView !== 'library' && currentView !== 'tutorials' && (
+                    <button
+                      onClick={toggleDarkMode}
+                      className="p-2 bg-white rounded-full shadow-sm border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+                    >
+                      {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                    </button>
+                  )}
                 </div>
               </header>
             )}

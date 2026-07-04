@@ -32,7 +32,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
     <aside
       id="desktop-sidebar"
       className="hidden md:flex flex-col h-full bg-white dark:bg-slate-900/95 backdrop-blur-2xl text-slate-800 dark:text-slate-100 z-40 shrink-0 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 relative"
-      style={{ width: isCollapsed ? '76px' : '250px' }}
+      style={{ width: isCollapsed ? '76px' : '200px' }}
     >
       {/* Decorative gradient blur in background */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -41,13 +41,12 @@ export const Sidebar: React.FC<NavigationProps> = ({
       <div className={`p-4 flex items-center ${isCollapsed ? 'flex-col gap-3 justify-center' : 'justify-between'} border-b border-slate-200 dark:border-slate-800/60 sidebar-brand relative z-10 min-h-[72px] shrink-0`}>
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
-            <Code2 className="w-5 h-5 text-white" />
+            <img src="/logo.svg" className="w-5 h-5 object-contain brightness-0 invert" alt="AdvocoDe logo" />
           </div>
           {!isCollapsed && (
             <div className="animate-fade-in whitespace-nowrap">
               <h1 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">&lt;/AdvocoDe&gt;</h1>
-              <p className="text-[9px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Apple Design Language</p>
-            </div>
+              </div>
           )}
         </div>
         
@@ -74,8 +73,8 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Hub" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer relative ${
             currentView === 'chat'
-              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-blue-50/70 dark:bg-white/10 text-blue-500 dark:text-white shadow-sm dark:shadow-md font-light'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <div className="relative flex items-center justify-center shrink-0">
@@ -86,8 +85,8 @@ export const Sidebar: React.FC<NavigationProps> = ({
           </div>
           {!isCollapsed && (
             <>
-              <span className="text-xs animate-fade-in whitespace-nowrap">Hub</span>
-              <span className="ml-auto bg-blue-500/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm">
+              <span className="text-xs animate-fade-in whitespace-nowrap font-light">Hub</span>
+              <span className="ml-auto bg-blue-500/90 text-white text-[9px] font-light px-1.5 py-0.5 rounded-full shadow-sm">
                 Live
               </span>
             </>
@@ -99,12 +98,12 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Resources" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
             currentView === 'library'
-              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-blue-50/70 dark:bg-white/10 text-blue-500 dark:text-white shadow-sm dark:shadow-md font-light'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Library className="w-4.5 h-4.5 shrink-0" />
-          {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap">Resources</span>}
+          {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap font-light">Resources</span>}
         </button>
 
         <button
@@ -112,12 +111,12 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Tutorials" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
             currentView === 'tutorials'
-              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold border-l-2 border-indigo-500'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-blue-50/70 dark:bg-white/10 text-blue-500 dark:text-white shadow-sm dark:shadow-md font-light border-l border-indigo-500'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <GraduationCap className="w-4.5 h-4.5 text-indigo-400 shrink-0" />
-          {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap">Tutorials</span>}
+          {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap font-light">Tutorials</span>}
         </button>
 
         {/* INBUILT CODE EDITOR - PC PRIMARY FEATURE */}
@@ -126,15 +125,15 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Code Play" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
             currentView === 'editor'
-              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold border-l-2 border-blue-500'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-blue-50/70 dark:bg-white/10 text-blue-500 dark:text-white shadow-sm dark:shadow-md font-light border-l border-blue-500'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Terminal className="w-4.5 h-4.5 text-indigo-400 shrink-0" />
           {!isCollapsed && (
             <>
-              <span className="text-xs animate-fade-in whitespace-nowrap">Code Play</span>
-              <span className="ml-auto bg-indigo-500/20 text-indigo-300 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+              <span className="text-xs animate-fade-in whitespace-nowrap font-light">Code Play</span>
+              <span className="ml-auto bg-indigo-500/10 text-indigo-400 text-[8px] font-light px-1.5 py-0.5 rounded uppercase tracking-wider">
                 PC
               </span>
             </>
@@ -272,7 +271,7 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
           
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shrink-0">
-              <Code2 className="w-5 h-5 text-white" />
+              <img src="/logo.svg" className="w-5 h-5 object-contain brightness-0 invert" alt="AdvocoDe logo" />
             </div>
             <div>
               <h2 className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">&lt;/AdvocoDe&gt; Network</h2>

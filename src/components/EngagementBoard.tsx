@@ -15,6 +15,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { MemberProfile } from './MemberBioModal';
+import { getRelativeTimeString } from './ChatView';
 
 export interface EngagementPost {
   id: string;
@@ -29,6 +30,7 @@ export interface EngagementPost {
   hasUpvoted?: boolean;
   comments: { id: string; authorName: string; text: string; time: string }[];
   time: string;
+  timeMs?: number;
 }
 
 interface EngagementBoardProps {
@@ -36,92 +38,6 @@ interface EngagementBoardProps {
   onViewMember: (profile: MemberProfile) => void;
   onToast: (msg: string) => void;
 }
-
-const DEFAULT_POSTS: EngagementPost[] = [
-  {
-    id: 'post_1',
-    title: 'Optimizing State in React Custom Hooks',
-    content: 'Hey guys, wrote a super clean hook for managing localStorage states safely in React without memory leaks or unnecessary HMR triggers. Enjoy!',
-    type: 'code_share',
-    language: 'typescript',
-    code: `// Custom LocalStorage hook in React\nexport function useLocalStorage<T>(key: string, initialValue: T) {\n  const [storedValue, setStoredValue] = useState<T>(() => {\n    try {\n      const item = window.localStorage.getItem(key);\n      return item ? JSON.parse(item) : initialValue;\n    } catch (error) {\n      return initialValue;\n    }\n  });\n\n  const setValue = (value: T | ((val: T) => T)) => {\n    try {\n      const valueToStore = value instanceof Function ? value(storedValue) : value;\n      setStoredValue(valueToStore);\n      window.localStorage.setItem(key, JSON.stringify(valueToStore));\n    } catch (error) {\n      console.log(error);\n    }\n  };\n\n  return [storedValue, setValue] as const;\n}`,
-    author: {
-      name: 'Mike O. (Fullstack)',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      regNumber: 'BCS/2025/1102',
-      specialty: 'Fullstack TypeScript Developer',
-      bio: 'TypeScript and Node.js geek 🚀 | Building fast server systems',
-      techStack: ['TypeScript', 'React', 'Node.js', 'PostgreSQL', 'Docker'],
-      streakDays: 18,
-      points: 420,
-      portfolioItems: [
-        { name: 'Express_Server_Boilerplate.zip', category: 'Web Development' },
-        { name: 'SQLite Database Wrapper', category: 'Database Systems' }
-      ]
-    },
-    upvotes: 24,
-    hasUpvoted: false,
-    comments: [
-      { id: 'c1', authorName: 'Alex M.', text: 'This is brilliant! Solving state flash loads is critical. Using this in my project.', time: '2 hrs ago' },
-      { id: 'c2', authorName: 'David K.', text: 'Extremely clean code, Mike! Perfect use of lazy initialization.', time: '1 hr ago' }
-    ],
-    time: '3 hours ago'
-  },
-  {
-    id: 'post_2',
-    title: 'iOS Form Input Sizing UX Best Practices?',
-    content: 'Working on the upcoming Hackathon registration mobile layouts. Should form inputs default to 16px font-size on iOS to prevent auto-zooming, or stick to 14px with responsive scale? What are your thoughts?',
-    type: 'question',
-    author: {
-      name: 'David K. (UX Lead)',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      regNumber: 'BIT/2024/4921',
-      specialty: 'UI/UX Design Lead',
-      bio: 'Designing the future ✨ | Figma expert & iOS design guidelines',
-      techStack: ['Figma', 'CSS/Tailwind', 'Mobile UX', 'Wireframing', 'Prototyping'],
-      streakDays: 24,
-      points: 650,
-      portfolioItems: [
-        { name: 'Figma UI Kit - Club Assets 2026', category: 'Web Development' },
-        { name: 'Mobile UX Design Principles.pdf', category: 'Design Resources' }
-      ]
-    },
-    upvotes: 19,
-    hasUpvoted: false,
-    comments: [
-      { id: 'c3', authorName: 'Mike O.', text: 'Always use 16px font size on inputs for iOS! Standard iOS Safari behavior zooms in aggressively if it is < 16px, which destroys layout.', time: 'Yesterday' }
-    ],
-    time: 'Yesterday'
-  },
-  {
-    id: 'post_3',
-    title: 'Quick Gemini SDK Text Streaming Snippet',
-    content: 'Check out how easy it is to stream text using the modern @google/genai SDK in a Node.js backend. Keep keys hidden on the server!',
-    type: 'code_share',
-    language: 'javascript',
-    code: `import { GoogleGenAI } from "@google/genai";\n\nconst ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });\nconst response = await ai.models.generateContentStream({\n  model: 'gemini-2.5-flash',\n  contents: 'Write a club announcement about Hackathon 2026',\n});\nfor await (const chunk of response) {\n  process.stdout.write(chunk.text);\n}`,
-    author: {
-      name: 'Joy Muthoni (AI Lead)',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      regNumber: 'BIT/2025/3091',
-      specialty: 'AI Student Coordinator',
-      bio: 'Machine Learning enthusiast | Prompt engineer & Python developer',
-      techStack: ['Python', 'TensorFlow', 'Gemini API', 'Node.js', 'Google Cloud'],
-      streakDays: 14,
-      points: 310,
-      portfolioItems: [
-        { name: 'Intro_to_Python_DataScience.pdf', category: 'AI & Data Science' },
-        { name: 'TensorFlow Campus Workshop Lab', category: 'AI & Data Science' }
-      ]
-    },
-    upvotes: 31,
-    hasUpvoted: false,
-    comments: [
-      { id: 'c4', authorName: 'Prof. J. Ndegwa', text: 'Excellent demonstration, Joy. Modern SDKs are far more efficient.', time: 'Yesterday' }
-    ],
-    time: 'Yesterday'
-  }
-];
 
 export const EngagementBoard: React.FC<EngagementBoardProps> = ({
   currentUser,
@@ -214,13 +130,14 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
       upvotes: 1,
       hasUpvoted: true,
       comments: [],
-      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      timeMs: Date.now()
     };
 
     const updated = [newPost, ...posts];
     savePosts(updated);
     setShowCreateModal(false);
-    onToast('🚀 Post published to engagement hub!');
+    onToast('Posted');
 
     // Reset Form
     setPostTitle('');
@@ -240,7 +157,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
             ...post.comments,
             {
               id: `comment_${Date.now()}`,
-              authorName: currentUser?.name || 'Alex M.',
+              authorName: currentUser?.name || 'User',
               text: newCommentText.trim(),
               time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
             }
@@ -417,7 +334,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
 
                   {/* Post Timestamp */}
                   <p className="text-[9px] text-slate-400 font-bold mt-3 uppercase tracking-wider">
-                    Published {post.time}
+                    Published {getRelativeTimeString(post.timeMs || post.time)}
                   </p>
 
                 </div>
