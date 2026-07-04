@@ -214,7 +214,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
       upvotes: 1,
       hasUpvoted: true,
       comments: [],
-      time: 'Just now'
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     };
 
     const updated = [newPost, ...posts];
@@ -242,7 +242,7 @@ export const EngagementBoard: React.FC<EngagementBoardProps> = ({
               id: `comment_${Date.now()}`,
               authorName: currentUser?.name || 'Alex M.',
               text: newCommentText.trim(),
-              time: 'Just now'
+              time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
             }
           ]
         };

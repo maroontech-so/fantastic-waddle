@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, Code2, ArrowRight, Loader2, Menu, AlertTriangle, Copy, Check, Info } from 'lucide-react';
+import { Bell, Search, Code2, ArrowRight, Loader2, Menu, AlertTriangle, Copy, Check, Info, Moon, Sun } from 'lucide-react';
 import { User, Notice, ClubEvent, LibraryFolder, LibraryFile, Channel, ChatMessage } from './types';
 import { Sidebar, BottomNav, AndroidDrawer } from './components/Navigation';
 import { LibraryView } from './components/LibraryView';
@@ -59,6 +59,31 @@ export default function App() {
   const [showDomainHelp, setShowDomainHelp] = useState(true);
   const [copiedDomain, setCopiedDomain] = useState<string | null>(null);
 
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('advocode_dark_mode') === 'true';
+    if (saved) document.documentElement.classList.add('dark');
+    return saved;
+  });
+
+  const toggleDarkMode = () => {
+    const next = !isDark;
+    setIsDark(next);
+    localStorage.setItem('advocode_dark_mode', String(next));
+    if (next) {
+      document.documentElement.classList.add('dark');
+      triggerToast('🌙 Dark theme enabled');
+    } else {
+      document.documentElement.classList.remove('dark');
+      triggerToast('☀️ Light theme enabled');
+    }
+  };
+
+  const generateRandomUsername = (prefix?: string) => {
+    const base = prefix ? prefix.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 5) : 'dev';
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    return `@${base || 'user'}_${randomSuffix}`;
+  };
+
   const handleCopyDomain = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedDomain(text);
@@ -99,7 +124,7 @@ export default function App() {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'AdvocoDe Member',
               email: firebaseUser.email || '',
-              username: '@' + (firebaseUser.email?.split('@')[0] || 'dev_' + firebaseUser.uid.substring(0, 4).toLowerCase()),
+              username: generateRandomUsername(firebaseUser.displayName || firebaseUser.email?.split('@')[0]),
               regNumber: 'ADV/' + firebaseUser.uid.substring(0, 4).toUpperCase(),
               bio: 'Developer • </AdvocoDe> Network',
               skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase'],
@@ -166,7 +191,7 @@ export default function App() {
           uid: fbUser.uid,
           name: fbUser.displayName || fbUser.email?.split('@')[0] || 'AdvocoDe Member',
           email: fbUser.email || '',
-          username: '@' + (fbUser.email?.split('@')[0] || 'dev_' + fbUser.uid.substring(0, 4).toLowerCase()),
+          username: generateRandomUsername(fbUser.displayName || fbUser.email?.split('@')[0]),
           regNumber: 'ADV/' + fbUser.uid.substring(0, 4).toUpperCase(),
           bio: 'Developer • </AdvocoDe> Network',
           skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase', 'Google Cloud'],
@@ -248,7 +273,7 @@ export default function App() {
           uid: fbUser.uid,
           name: authName.trim() || authEmail.split('@')[0] || 'AdvocoDe Member',
           email: authEmail,
-          username: authRegNumber.trim().startsWith('@') ? authRegNumber.trim() : '@' + (authRegNumber.trim() || authEmail.split('@')[0] || 'dev'),
+          username: authRegNumber.trim().startsWith('@') ? authRegNumber.trim() : (authRegNumber.trim() ? '@' + authRegNumber.trim() : generateRandomUsername(authName.trim() || authEmail.split('@')[0])),
           regNumber: 'ADV/' + fbUser.uid.substring(0, 4).toUpperCase(),
           bio: 'Developer • </AdvocoDe> Network',
           skills: ['React', 'TypeScript', 'Tailwind CSS', 'Firebase'],
@@ -385,6 +410,8 @@ export default function App() {
         return 'Hub';
       case 'library':
         return 'Resources';
+      case 'tutorials':
+        return 'Interactive Tutorials';
       case 'editor':
         return 'Code Playground';
       case 'profile':
@@ -461,13 +488,12 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Unique Username</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Unique Username (Optional - Random by default)</label>
                     <input
-                      required
                       type="text"
                       value={authRegNumber}
                       onChange={(e) => setAuthRegNumber(e.target.value)}
-                      placeholder="@developer"
+                      placeholder="e.g., @alex_dev (Auto-generated if empty)"
                       className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-sm font-mono"
                     />
                   </div>
@@ -585,6 +611,14 @@ export default function App() {
                   </div>
 
                   <button
+                    onClick={toggleDarkMode}
+                    className="p-2 bg-white rounded-full shadow-sm border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+                  >
+                    {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                  </button>
+
+                  <button
                     onClick={() => triggerToast('No new announcements')}
                     className="relative p-2 bg-white rounded-full shadow-sm border border-slate-200 hover:bg-slate-100 transition-colors"
                   >
@@ -596,10 +630,11 @@ export default function App() {
             )}
 
             {/* Active Content Screens */}
-            <div className="flex-1 overflow-y-auto relative no-scrollbar pb-24 md:pb-6">
+            <div className={`flex-1 relative no-scrollbar ${currentView === 'editor' ? 'h-full flex flex-col overflow-hidden pb-16 md:pb-0' : 'overflow-y-auto pb-24 md:pb-6'}`}>
 
-              {currentView === 'library' && (
+              {(currentView === 'library' || currentView === 'tutorials') && (
                 <LibraryView
+                  initialTab={currentView === 'tutorials' ? 'tutorials' : 'files'}
                   folders={folders}
                   files={files}
                   onAddFile={handleAddFile}
@@ -638,6 +673,8 @@ export default function App() {
                   onUpdateUser={handleUpdateUser}
                   onSignOut={handleSignOut}
                   onToast={triggerToast}
+                  isDark={isDark}
+                  onToggleTheme={toggleDarkMode}
                 />
               )}
             </div>

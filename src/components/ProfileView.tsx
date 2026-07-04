@@ -10,6 +10,8 @@ interface ProfileViewProps {
   onUpdateUser: (updated: User) => void;
   onSignOut: () => void;
   onToast: (msg: string) => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -17,10 +19,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onUpdateUser,
   onSignOut,
   onToast,
+  isDark: propIsDark,
+  onToggleTheme,
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('advocode_dark_mode') === 'true');
+  const currentIsDark = propIsDark !== undefined ? propIsDark : isDark;
 
   // Edit fields
   const [name, setName] = useState(user.name);
@@ -33,15 +38,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [customCoverUrl, setCustomCoverUrl] = useState(user.coverUrl || '');
 
   const toggleDarkMode = () => {
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem('advocode_dark_mode', String(next));
-    if (next) {
-      document.documentElement.classList.add('dark');
-      onToast('🌙 Dark theme enabled');
+    if (onToggleTheme) {
+      onToggleTheme();
     } else {
-      document.documentElement.classList.remove('dark');
-      onToast('☀️ Light theme enabled');
+      const next = !isDark;
+      setIsDark(next);
+      localStorage.setItem('advocode_dark_mode', String(next));
+      if (next) {
+        document.documentElement.classList.add('dark');
+        onToast('🌙 Dark theme enabled');
+      } else {
+        document.documentElement.classList.remove('dark');
+        onToast('☀️ Light theme enabled');
+      }
     }
   };
 
@@ -238,11 +247,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="bg-slate-100 p-2.5 rounded-xl text-slate-700">
-                {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                {currentIsDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
               </div>
               <span className="flex-1 text-sm font-bold text-slate-900">Dark Theme Toggle</span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase">
-                {isDark ? 'Dark' : 'Light'}
+                {currentIsDark ? 'Dark' : 'Light'}
               </span>
             </div>
 

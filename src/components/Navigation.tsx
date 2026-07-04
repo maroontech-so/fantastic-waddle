@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Library, MessageSquare, User as UserIcon, Settings, LogOut, Code2, Terminal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Library, MessageSquare, User as UserIcon, Settings, LogOut, Code2, Terminal, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { User } from '../types';
 
 interface NavigationProps {
@@ -31,29 +31,29 @@ export const Sidebar: React.FC<NavigationProps> = ({
   return (
     <aside
       id="desktop-sidebar"
-      className="hidden md:flex flex-col h-full bg-slate-900/95 backdrop-blur-2xl text-slate-100 z-40 shrink-0 border-r border-slate-800 transition-all duration-300 relative"
+      className="hidden md:flex flex-col h-full bg-white dark:bg-slate-900/95 backdrop-blur-2xl text-slate-800 dark:text-slate-100 z-40 shrink-0 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 relative"
       style={{ width: isCollapsed ? '76px' : '250px' }}
     >
       {/* Decorative gradient blur in background */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
       
       {/* Sidebar Header Brand Area */}
-      <div className={`p-4 flex items-center ${isCollapsed ? 'flex-col gap-3 justify-center' : 'justify-between'} border-b border-slate-800/60 sidebar-brand relative z-10 min-h-[72px] shrink-0`}>
+      <div className={`p-4 flex items-center ${isCollapsed ? 'flex-col gap-3 justify-center' : 'justify-between'} border-b border-slate-200 dark:border-slate-800/60 sidebar-brand relative z-10 min-h-[72px] shrink-0`}>
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
             <Code2 className="w-5 h-5 text-white" />
           </div>
           {!isCollapsed && (
             <div className="animate-fade-in whitespace-nowrap">
-              <h1 className="font-bold text-sm tracking-tight text-white">MKU IT HUB</h1>
-              <p className="text-[9px] text-blue-400 font-bold uppercase tracking-wider">Apple Design Language</p>
+              <h1 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">&lt;/AdvocoDe&gt;</h1>
+              <p className="text-[9px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Apple Design Language</p>
             </div>
           )}
         </div>
         
         <button
           onClick={toggleCollapse}
-          className={`p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer ${
+          className={`p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-lg transition-colors cursor-pointer ${
             isCollapsed ? 'mt-1' : 'ml-2'
           }`}
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
@@ -64,7 +64,7 @@ export const Sidebar: React.FC<NavigationProps> = ({
 
       <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4.5'} py-6 space-y-1.5 overflow-y-auto relative z-10 no-scrollbar`}>
         {!isCollapsed && (
-          <p className="px-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 sidebar-text">
+          <p className="px-3.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 sidebar-text">
             workspace
           </p>
         )}
@@ -74,8 +74,8 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Hub" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer relative ${
             currentView === 'chat'
-              ? 'bg-white/10 text-white shadow-md font-bold'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <div className="relative flex items-center justify-center shrink-0">
@@ -99,12 +99,25 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Resources" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
             currentView === 'library'
-              ? 'bg-white/10 text-white shadow-md font-bold'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Library className="w-4.5 h-4.5 shrink-0" />
           {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap">Resources</span>}
+        </button>
+
+        <button
+          onClick={() => onNavigate('tutorials')}
+          title={isCollapsed ? "Tutorials" : undefined}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
+            currentView === 'tutorials'
+              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold border-l-2 border-indigo-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <GraduationCap className="w-4.5 h-4.5 text-indigo-400 shrink-0" />
+          {!isCollapsed && <span className="text-xs animate-fade-in whitespace-nowrap">Tutorials</span>}
         </button>
 
         {/* INBUILT CODE EDITOR - PC PRIMARY FEATURE */}
@@ -113,8 +126,8 @@ export const Sidebar: React.FC<NavigationProps> = ({
           title={isCollapsed ? "Code Play" : undefined}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5'} py-2.5 rounded-xl transition-all duration-200 apple-active cursor-pointer ${
             currentView === 'editor'
-              ? 'bg-white/10 text-white shadow-md font-bold border-l-2 border-blue-500'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white shadow-sm dark:shadow-md font-bold border-l-2 border-blue-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Terminal className="w-4.5 h-4.5 text-indigo-400 shrink-0" />
@@ -132,12 +145,12 @@ export const Sidebar: React.FC<NavigationProps> = ({
       </nav>
 
       {user && (
-        <div className={`p-4 border-t border-slate-800/60 bg-slate-950/20 flex shrink-0 ${isCollapsed ? 'justify-center' : ''}`}>
+        <div className={`p-4 border-t border-slate-200 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/20 flex shrink-0 ${isCollapsed ? 'justify-center' : ''}`}>
           <button
             onClick={() => onNavigate('profile')}
             title={isCollapsed ? `${user.name} - Profile Settings` : undefined}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center p-1' : 'gap-3 p-2'} rounded-xl transition-all text-left apple-active ${
-              currentView === 'profile' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-slate-400'
+              currentView === 'profile' ? 'bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
             }`}
           >
             <img
@@ -146,15 +159,15 @@ export const Sidebar: React.FC<NavigationProps> = ({
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563EB&color=fff`
               }
               alt="Profile"
-              className="w-9 h-9 rounded-full border border-slate-800 shadow-sm shrink-0"
+              className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm shrink-0"
             />
             {!isCollapsed && (
               <>
                 <div className="flex-1 overflow-hidden animate-fade-in">
-                  <h4 className="text-xs font-bold truncate text-white">{user.name}</h4>
-                  <p className="text-[9px] text-slate-500 truncate">{user.regNumber}</p>
+                  <h4 className="text-xs font-bold truncate text-slate-900 dark:text-white">{user.name}</h4>
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 truncate">{user.regNumber}</p>
                 </div>
-                <Settings className="w-4 h-4 text-slate-500 shrink-0 hover:text-white transition-colors" />
+                <Settings className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 hover:text-slate-800 dark:hover:text-white transition-colors" />
               </>
             )}
           </button>
@@ -171,6 +184,7 @@ export const BottomNav: React.FC<NavigationProps> = ({
   const tabs = [
     { id: 'chat', label: 'Hub', icon: MessageSquare, badge: true },
     { id: 'library', label: 'Resources', icon: Library },
+    { id: 'tutorials', label: 'Tutorials', icon: GraduationCap },
     { id: 'editor', label: 'Code', icon: Terminal },
     { id: 'profile', label: 'Profile', icon: UserIcon },
   ];
@@ -248,12 +262,12 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
 
       {/* Drawer Panel */}
       <div
-        className={`absolute top-0 bottom-0 left-0 w-[275px] bg-white rounded-r-2xl shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-300 ease-out border-r border-slate-100 ${
+        className={`absolute top-0 bottom-0 left-0 w-[275px] bg-white dark:bg-slate-900 rounded-r-2xl shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-300 ease-out border-r border-slate-200 dark:border-slate-800 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* iOS / Apple aesthetic drawer header */}
-        <div className="p-6 bg-slate-950 text-white relative overflow-hidden shrink-0">
+        <div className="p-6 bg-white dark:bg-slate-950 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 relative overflow-hidden shrink-0">
           <div className="absolute right-0 top-0 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
           
           <div className="flex items-center gap-3 mb-4">
@@ -261,33 +275,34 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
               <Code2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="font-extrabold text-sm tracking-tight text-white">MKU IT Club</h2>
-              <p className="text-[9px] text-blue-400 font-bold uppercase tracking-wider">Hub Companion</p>
+              <h2 className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">&lt;/AdvocoDe&gt; Network</h2>
+              <p className="text-[9px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Hub Companion</p>
             </div>
           </div>
 
           {user && (
-            <div className="pt-2 border-t border-slate-800 flex items-center gap-3">
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-3">
               <img
                 src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563EB&color=fff`}
                 alt="Profile"
-                className="w-10 h-10 rounded-full border border-slate-800 shadow-sm"
+                className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm"
               />
               <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
-                <p className="text-[9px] text-slate-400 truncate">{user.regNumber}</p>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name}</h4>
+                <p className="text-[9px] text-slate-500 dark:text-slate-400 truncate">{user.regNumber}</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Drawer Menu Items */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 bg-slate-50/50">
-          <p className="px-3.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Workspace</p>
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 bg-white dark:bg-slate-900/50">
+          <p className="px-3.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Workspace</p>
           
           {[
             { id: 'chat', label: 'Hub', icon: MessageSquare },
             { id: 'library', label: 'Resources', icon: Library },
+            { id: 'tutorials', label: 'Tutorials', icon: GraduationCap },
             { id: 'editor', label: 'Code Play', icon: Terminal },
             { id: 'profile', label: 'Profile Settings', icon: UserIcon },
           ].map((item) => {
@@ -302,8 +317,8 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
                 }}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all font-semibold text-xs apple-active ${
                   isActive
-                    ? 'bg-blue-50 text-blue-800 shadow-inner'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 shadow-inner'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
@@ -314,13 +329,13 @@ export const AndroidDrawer: React.FC<AndroidDrawerProps> = ({
         </div>
 
         {/* Drawer Bottom Actions */}
-        <div className="p-4 border-t border-slate-100 bg-white shrink-0">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
           <button
             onClick={() => {
               onSignOut();
               onClose();
             }}
-            className="w-full bg-slate-50 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer text-xs"
+            className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-red-50 hover:text-red-600 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer text-xs"
           >
             <LogOut className="w-4 h-4" /> Sign Out
           </button>

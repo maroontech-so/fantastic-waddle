@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Home, ChevronRight, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy } from 'lucide-react';
 import { LibraryFolder, LibraryFile, FileType } from '../types';
 import tutorialData from '../tutorial.json';
@@ -11,6 +11,7 @@ interface LibraryViewProps {
   onToast: (msg: string) => void;
   onTryCode?: (code: { html: string; css: string; js: string; title: string }) => void;
   onRewardXP?: (amount: number, type: 'checkin' | 'engagement' | 'learning' | 'contribution', description: string) => void;
+  initialTab?: 'files' | 'tutorials';
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -20,8 +21,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onToast,
   onTryCode,
   onRewardXP,
+  initialTab = 'files',
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'files' | 'tutorials'>('files');
+  const [activeSubTab, setActiveSubTab] = useState<'files' | 'tutorials'>(initialTab);
+  
+  useEffect(() => {
+    if (initialTab) {
+      setActiveSubTab(initialTab);
+    }
+  }, [initialTab]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -95,7 +103,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       size: fileType === 'link' ? 'Link' : fileSize,
       type: fileType,
       uploader: 'You',
-      time: 'Just now',
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       category: fileCategory,
     };
 
@@ -145,59 +153,33 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
   return (
     <div className="space-y-6 px-4 md:px-8 pt-6 pb-24 relative max-w-5xl mx-auto">
-      {/* Official IT Club Github Repo Card (At the top) */}
-      <div className="bg-slate-900 text-white rounded-2xl p-4 md:p-5 border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
-        <div className="flex items-center gap-3.5 text-center sm:text-left">
-          <div className="p-3 bg-white/10 rounded-xl shrink-0 flex items-center justify-center">
-            <Github className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h4 className="font-extrabold text-sm tracking-tight flex items-center gap-1.5 justify-center sm:justify-start">
-              Official MKU IT Club Repo <span className="bg-blue-500/20 text-blue-400 font-extrabold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider">GitHub</span>
-            </h4>
-            <p className="text-slate-400 text-[10.5px] mt-1 font-semibold leading-relaxed">
-              Explore our open-source student-built code repositories, check lecture slide projects, and submit pull requests.
-            </p>
-          </div>
-        </div>
-        <a
-          href="https://github.com/mku-it-club"
-          target="_blank"
-          rel="noreferrer"
-          className="bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-[11px] px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer w-full sm:w-auto justify-center"
-        >
-          <ExternalLink className="w-3.5 h-3.5" /> Visit Club GitHub
-        </a>
-      </div>
-
-      {/* Modern High-fidelity tab-bar to switch between resources and interactive tutorials */}
-      <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/50">
-        <button
-          onClick={() => {
-            setActiveSubTab('files');
-            onToast('Navigated to shared folder directory');
-          }}
-          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            activeSubTab === 'files' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Folder className="w-4 h-4 text-blue-500" /> Resource Files Directory
-        </button>
-        <button
-          onClick={() => {
-            setActiveSubTab('tutorials');
-            onToast('Navigated to interactive tutorials');
-          }}
-          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            activeSubTab === 'tutorials' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <GraduationCap className="w-4.5 h-4.5 text-indigo-500" /> Interactive Coding Lessons
-        </button>
-      </div>
-
       {activeSubTab === 'files' ? (
         <>
+          {/* Official IT Club Github Repo Card (Only on Resources page) */}
+          <div className="bg-slate-900 text-white rounded-2xl p-4 md:p-5 border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="p-3 bg-white/10 rounded-xl shrink-0 flex items-center justify-center">
+                <Github className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm tracking-tight flex items-center gap-1.5 justify-center sm:justify-start">
+                  Official &lt;/AdvocoDe&gt; Network Repo <span className="bg-blue-500/20 text-blue-400 font-extrabold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider">GitHub</span>
+                </h4>
+                <p className="text-slate-400 text-[10.5px] mt-1 font-semibold leading-relaxed">
+                  Explore our open-source student-built code repositories, check lecture slide projects, and submit pull requests.
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://github.com/mku-it-club"
+              target="_blank"
+              rel="noreferrer"
+              className="bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-[11px] px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer w-full sm:w-auto justify-center"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Visit Club GitHub
+            </a>
+          </div>
+
           {/* Search Input for Mobile */}
           <div className="md:hidden relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
@@ -453,26 +435,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                         >
                           <BookOpenCheck className="w-3 h-3" />
                           {masteredLessons.includes(item.topic) ? '✓ Mastered' : 'Mark Mastered'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            const template = getTemplateForTopic(item, item.partNumber);
-                            if (onTryCode) {
-                              onTryCode({
-                                title: item.topic,
-                                html: template.html,
-                                css: template.css,
-                                js: template.js,
-                              });
-                              if (onRewardXP) {
-                                onRewardXP(15, 'learning', `Started interactive coding sandbox: ${item.topic}`);
-                              }
-                              onToast(`Loaded "${item.topic}" into live playground! +15 XP`);
-                            }
-                          }}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer"
-                        >
-                          Try in Playground <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -740,30 +702,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                                             <div className="text-slate-300 font-mono text-[10px] whitespace-pre-wrap leading-relaxed max-w-full overflow-x-auto">
                                               {topic.example}
                                             </div>
-                                          </div>
-
-                                          {/* Try Code Sandbox button */}
-                                          <div className="flex justify-end pt-1">
-                                            <button
-                                              onClick={() => {
-                                                const template = getTemplateForTopic(topic, currentPart.part_number);
-                                                if (onTryCode) {
-                                                  onTryCode({
-                                                    title: topic.topic,
-                                                    html: template.html,
-                                                    css: template.css,
-                                                    js: template.js,
-                                                  });
-                                                  if (onRewardXP) {
-                                                    onRewardXP(15, 'learning', `Started interactive coding sandbox: ${topic.topic}`);
-                                                  }
-                                                  onToast(`Loaded "${topic.topic}" into live playground! +15 XP`);
-                                                }
-                                              }}
-                                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                                            >
-                                              Try in Playground <ArrowRight className="w-3.5 h-3.5" />
-                                            </button>
                                           </div>
                                         </div>
                                       )}

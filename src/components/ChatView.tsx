@@ -27,6 +27,8 @@ import {
   Send as SendIcon,
   Megaphone,
   Calendar,
+  Clock,
+  MapPin,
   Video,
   Phone,
   Info,
@@ -41,9 +43,90 @@ import { MemberBioModal, MemberProfile } from './MemberBioModal';
 import { db, auth, rtdb } from '../firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { cleanForFirestore } from '../utils/clean';
-import { ref, onValue, push } from 'firebase/database';
+import { ref, onValue, push, set, onDisconnect, serverTimestamp } from 'firebase/database';
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
+
+export const DYNAMIC_POST_PROMPTS = [
+  "Got a bug you're wrestling with?",
+  "Wanna ask a coding question?",
+  "What's on your mind today, dev?",
+  "Working on a cool new project?",
+  "Stuck on a tricky algorithm?",
+  "What new tech stack are you exploring?",
+  "Need code review on your latest PR?",
+  "Share a dev tip of the day!",
+  "What's your biggest win this week?",
+  "Which programming language is your favorite right now?",
+  "Anyone want to hack together this weekend?",
+  "Discovered any amazing developer tools recently?",
+  "What error message has been haunting you?",
+  "Looking for study buddies or project collaborators?",
+  "What's your current desktop or IDE setup?",
+  "How do you organize your workflow and sprints?",
+  "Learned anything new in your classes today?",
+  "Anyone attending an upcoming tech meetup?",
+  "What's your favorite VS Code extension?",
+  "Need advice on tech career paths or internships?",
+  "Share a code snippet that you're proud of!",
+  "What API are you integrating today?",
+  "Frontend vs Backend: what are you tackling right now?",
+  "Have a question about cloud deployment or Docker?",
+  "Anyone playing with AI models or LLMs lately?",
+  "What's your favorite database to work with?",
+  "How do you handle state management in your apps?",
+  "Got any recommendations for coding tutorials or books?",
+  "What was your first programming language?",
+  "Share a meme or funny dev moment!",
+  "What feature should we add to the IT Club app next?",
+  "Anyone practicing LeetCode or data structures?",
+  "How do you debug when console.log doesn't cut it?",
+  "What architecture pattern are you experimenting with?",
+  "Looking for feedback on your portfolio website?",
+  "What cybersecurity concept fascinated you lately?",
+  "Anyone interested in mobile app development?",
+  "What's the hardest concept you've mastered recently?",
+  "Share your GitHub repo for some stars and love!",
+  "What are your coding goals for this month?",
+  "How do you stay motivated during long debugging sessions?"
+];
+
+export const getUserRtdbKey = (u?: any): string => {
+  if (!u) return 'guest';
+  if (typeof u === 'string') return u.toLowerCase().replace(/[.#$[\]/]/g, '_').replace(/\s+/g, '_');
+  const keyStr = u.id || u.uid || u.email || u.username || u.name || 'guest';
+  return keyStr.toLowerCase().replace(/[.#$[\]/]/g, '_').replace(/\s+/g, '_');
+};
+
+export const formatLastSeen = (statusObj?: { online?: boolean; lastSeen?: number; state?: string }, fallbackOnline = false) => {
+  if (!statusObj) {
+    return { text: fallbackOnline ? 'ONLINE' : 'OFFLINE (LAST SEEN RECENTLY)', isOnline: fallbackOnline };
+  }
+  if (statusObj.online || statusObj.state === 'online') {
+    return { text: 'ONLINE', isOnline: true };
+  }
+  if (!statusObj.lastSeen) {
+    return { text: 'OFFLINE (LAST SEEN RECENTLY)', isOnline: false };
+  }
+  const date = new Date(statusObj.lastSeen);
+  const now = new Date();
+  const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+  if (diffMin < 1) return { text: 'OFFLINE (LAST SEEN JUST NOW)', isOnline: false };
+  if (diffMin < 60) return { text: `OFFLINE (LAST SEEN ${diffMin}M AGO)`, isOnline: false };
+  
+  const isToday = date.toDateString() === now.toDateString();
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) {
+    return { text: `OFFLINE (LAST SEEN TODAY AT ${timeStr})`, isOnline: false };
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return { text: `OFFLINE (LAST SEEN YESTERDAY AT ${timeStr})`, isOnline: false };
+  }
+  const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return { text: `OFFLINE (LAST SEEN ${dateStr} AT ${timeStr})`, isOnline: false };
+};
 
 export interface EngagementPost {
   id: string;
@@ -61,6 +144,8 @@ export interface EngagementPost {
   comments: { id: string; authorName: string; text: string; time: string; avatarUrl?: string }[];
   time: string;
   eventDate?: string; // Target date for countdowns
+  eventTime?: string;
+  eventVenue?: string;
 }
 
 export const renderWithMentions = (text: string, onToast?: (msg: string) => void) => {
@@ -285,6 +370,9 @@ const DEFAULT_POSTS: EngagementPost[] = [
     reposts: 15,
     hasUpvoted: false,
     hasReposted: false,
+    eventDate: '2026-07-15',
+    eventTime: '14:00 (EAT)',
+    eventVenue: 'MKU Tech Lab 4B & Online Stream',
     comments: [
       { id: 'ce1', authorName: 'David K.', text: 'Count me in! I will bring the UX wireframe diagrams.', time: '1 day ago' }
     ],
@@ -318,6 +406,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [composeCategory, setComposeCategory] = useState<'code_share' | 'question' | 'collaboration' | 'announcement' | 'event'>('code_share');
   const [composeImageUrl, setComposeImageUrl] = useState('');
   const [uploadingPostImage, setUploadingPostImage] = useState(false);
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [eventVenue, setEventVenue] = useState('');
 
   // Mention autocomplete state
   const [mentionFilter, setMentionFilter] = useState<string | null>(null);
@@ -381,6 +472,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [activeDMInput, setActiveDMInput] = useState('');
   const [showAddContactDropdown, setShowAddContactDropdown] = useState(false);
   const [followedUsers, setFollowedUsers] = useState<Record<string, boolean>>({});
+  const [promptIndex, setPromptIndex] = useState(() => Math.floor(Math.random() * DYNAMIC_POST_PROMPTS.length));
+  const [explicitChatIds, setExplicitChatIds] = useState<string[]>([]);
+  const [userStatuses, setUserStatuses] = useState<Record<string, any>>({});
+  const [allRtdbChats, setAllRtdbChats] = useState<{ community: any[]; saved: any[]; direct: Record<string, any[]> }>({ community: [], saved: [], direct: {} });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPromptIndex(prev => (prev + 1) % DYNAMIC_POST_PROMPTS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Alphabetically arranged member list from the forum
   const FORUM_MEMBERS = [
@@ -425,92 +527,209 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   ];
 
-  const sanitizeRtdbKey = (str?: string) => {
-    return (str || 'default').toLowerCase().replace(/[.#$[\]/]/g, '_').replace(/\s+/g, '_');
-  };
+  const sanitizeRtdbKey = (str?: string) => getUserRtdbKey(str);
+  const myId = getUserRtdbKey(currentUser || auth.currentUser);
 
-  const handleAddOrOpenChat = (member: { name: string; username: string; avatarUrl: string; online: boolean; messages: any[] }) => {
-    const existing = dmChats.find(c => c.memberName === member.name);
-    if (!existing) {
-      setDmChats(prev => [
-        ...prev,
-        {
-          id: sanitizeRtdbKey(member.name),
-          memberName: member.name,
-          username: member.username,
-          avatarUrl: member.avatarUrl,
-          online: member.online,
-          messages: member.messages
-        }
-      ]);
-    }
-    setActiveDMMember(member.name);
-    setShowAddContactDropdown(false);
-    onToast(`Started a chat with ${member.name}!`);
-  };
-  
-  // Custom pre-populated chats with real forum members
-  const [dmChats, setDmChats] = useState<{
-    id: string;
-    memberName: string;
-    username: string;
-    avatarUrl: string;
-    online: boolean;
-    typing?: boolean;
-    messages: { id: string; sender: 'me' | 'them'; text: string; time: string; hearted?: boolean; reactions?: string[] }[];
-  }[]>(FORUM_MEMBERS.map(m => ({
-    id: sanitizeRtdbKey(m.name),
-    memberName: m.name,
-    username: m.username,
-    avatarUrl: m.avatarUrl,
-    online: m.online,
-    messages: m.messages
-  })));
-
-  // Sync dmChats with real authenticated users from Firestore
+  // 1. Presence & Status Tracking
   useEffect(() => {
-    if (allUsers && allUsers.length > 0) {
-      const realMemberChats = allUsers.map(u => ({
-        id: sanitizeRtdbKey(u.uid || u.email || u.name),
-        memberName: u.name,
-        username: '@' + sanitizeRtdbKey(u.email?.split('@')[0] || u.name),
-        avatarUrl: u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563EB&color=fff`,
-        online: true,
-        messages: []
-      }));
-      setDmChats(realMemberChats);
-    }
-  }, [allUsers]);
-
-  // Realtime Database (RTDB) live messages listener for Active Chat / DM
-  const [rtdbMessages, setRtdbMessages] = useState<any[]>([]);
-  useEffect(() => {
-    if (!activeDMMember) {
-      setRtdbMessages([]);
-      return;
-    }
-    const myId = sanitizeRtdbKey(currentUser?.email || currentUser?.name || auth.currentUser?.email || 'guest');
-    const targetId = sanitizeRtdbKey(activeDMMember);
-    const chatId = [myId, targetId].sort().join('_');
-
-    const chatRef = ref(rtdb, `chats/${chatId}`);
-    const unsubscribe = onValue(chatRef, (snapshot) => {
-      const val = snapshot.val();
-      if (val) {
-        const msgList = Object.entries(val).map(([key, data]: [string, any]) => ({
-          id: key,
-          ...data
-        }));
-        setRtdbMessages(msgList);
-      } else {
-        setRtdbMessages([]);
+    if (!myId || myId === 'guest') return;
+    const myStatusRef = ref(rtdb, `/status/${myId}`);
+    const connectedRef = ref(rtdb, ".info/connected");
+    const unsubConnected = onValue(connectedRef, (snap) => {
+      if (snap.val() === true) {
+        onDisconnect(myStatusRef).set({
+          online: false,
+          lastSeen: Date.now(),
+          state: 'offline'
+        }).then(() => {
+          set(myStatusRef, {
+            online: true,
+            lastSeen: Date.now(),
+            state: 'online'
+          });
+        });
       }
-    }, (err) => {
-      console.error("RTDB Error:", err);
     });
 
-    return () => unsubscribe();
-  }, [activeDMMember, currentUser]);
+    const statusRef = ref(rtdb, `/status`);
+    const unsubStatus = onValue(statusRef, (snap) => {
+      setUserStatuses(snap.val() || {});
+    });
+
+    return () => {
+      unsubConnected();
+      unsubStatus();
+    };
+  }, [myId]);
+
+  // 2. Global RTDB messages listener
+  useEffect(() => {
+    const chatsRef = ref(rtdb, 'chats');
+    const unsubscribeChats = onValue(chatsRef, (snapshot) => {
+      const allVal = snapshot.val() || {};
+      const directMap: Record<string, any[]> = {};
+      let communityMsgs: any[] = [];
+      let savedMsgs: any[] = [];
+
+      Object.entries(allVal).forEach(([roomKey, roomData]: [string, any]) => {
+        if (!roomData || typeof roomData !== 'object') return;
+        const msgList = Object.entries(roomData).map(([k, v]: [string, any]) => ({
+          id: k,
+          ...v,
+          sender: (v.senderId === myId || v.senderName === currentUser?.name || v.sender === 'me') ? 'me' : 'them'
+        })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        if (roomKey === 'community_chat') {
+          communityMsgs = msgList;
+          return;
+        }
+        if (roomKey === `saved_messages_${myId}` || roomKey === 'saved_messages') {
+          savedMsgs = msgList;
+          return;
+        }
+
+        const partsTriple = roomKey.split('___');
+        const partsSingle = roomKey.split('_');
+        let otherId: string | null = null;
+        let otherName: string | null = null;
+
+        if (partsTriple.length === 2 && partsTriple.includes(myId)) {
+          otherId = partsTriple[0] === myId ? partsTriple[1] : partsTriple[0];
+        } else if (partsSingle.length >= 2) {
+          const involveMe = msgList.some(m => m.senderId === myId || m.receiverId === myId || m.senderName === currentUser?.name || m.receiverName === currentUser?.name);
+          if (involveMe) {
+            const firstOtherMsg = msgList.find(m => m.senderId && m.senderId !== myId) || msgList.find(m => m.receiverId && m.receiverId !== myId);
+            if (firstOtherMsg) {
+              otherId = firstOtherMsg.senderId === myId ? firstOtherMsg.receiverId : firstOtherMsg.senderId;
+              otherName = firstOtherMsg.senderId === myId ? firstOtherMsg.receiverName : firstOtherMsg.senderName;
+            } else if (partsSingle.includes(myId)) {
+              otherId = partsSingle.find(p => p !== myId) || null;
+            }
+          }
+        }
+
+        if (otherId) {
+          directMap[otherId] = msgList;
+          if (otherName) {
+            directMap[`name_${otherName.toLowerCase()}`] = msgList;
+          }
+        }
+      });
+
+      setAllRtdbChats({
+        community: communityMsgs,
+        saved: savedMsgs,
+        direct: directMap
+      });
+    });
+
+    return () => unsubscribeChats();
+  }, [myId, currentUser?.name]);
+
+  // Combined available members list for '+' dropdown
+  const allAvailableMembers = React.useMemo(() => {
+    const map: Record<string, any> = {};
+    FORUM_MEMBERS.forEach(m => {
+      const key = getUserRtdbKey(m.name);
+      const st = userStatuses[key] || userStatuses[getUserRtdbKey(m.name)];
+      const { text, isOnline } = formatLastSeen(st, m.online);
+      map[key] = {
+        id: key,
+        memberName: m.name,
+        name: m.name,
+        username: m.username,
+        avatarUrl: m.avatarUrl,
+        online: isOnline,
+        statusText: text,
+        defaultMessages: m.messages || []
+      };
+    });
+    if (allUsers) {
+      allUsers.forEach(u => {
+        const key = getUserRtdbKey(u);
+        if (key === myId && myId !== 'guest') return;
+        const st = userStatuses[key] || userStatuses[getUserRtdbKey(u.name)];
+        const { text, isOnline } = formatLastSeen(st, true);
+        map[key] = {
+          id: key,
+          memberName: u.name,
+          name: u.name,
+          username: u.username || ('@' + getUserRtdbKey(u.email?.split('@')[0] || u.name)),
+          avatarUrl: u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563EB&color=fff`,
+          online: isOnline,
+          statusText: text,
+          defaultMessages: []
+        };
+      });
+    }
+    return Object.values(map);
+  }, [allUsers, userStatuses, myId]);
+
+  // Compute established chats for Chat Home
+  const dmChats = React.useMemo(() => {
+    const communityChat = {
+      id: 'community_chat',
+      memberName: '🌐 </AdvocoDe> Community Chat',
+      username: '@everyone • Public Club Channel',
+      avatarUrl: 'https://ui-avatars.com/api/?name=Community+Chat&background=008069&color=fff',
+      online: true,
+      statusText: 'ALL MEMBERS ONLINE',
+      messages: allRtdbChats.community.length > 0 ? allRtdbChats.community : [
+        { id: 'c_welcome', sender: 'them', senderName: 'AdvocoDe Bot', text: 'Welcome to the </AdvocoDe> Community Chat! All club members can contribute and talk here.', time: 'Now' }
+      ]
+    };
+
+    const savedChat = {
+      id: 'saved_messages',
+      memberName: 'Saved Messages (Notes)',
+      username: '@me • Personal Scratchpad',
+      avatarUrl: 'https://ui-avatars.com/api/?name=Saved+Messages&background=6366F1&color=fff',
+      online: true,
+      statusText: 'PERSONAL NOTES',
+      messages: allRtdbChats.saved
+    };
+
+    const established: any[] = [];
+    allAvailableMembers.forEach(m => {
+      const msgs = allRtdbChats.direct[m.id] || allRtdbChats.direct[`name_${m.name.toLowerCase()}`] || [];
+      const hasRealMsgs = msgs.length > 0;
+      const isExplicit = explicitChatIds.includes(m.id) || explicitChatIds.includes(m.name);
+      if (hasRealMsgs || isExplicit || (m.defaultMessages.length > 0 && isExplicit)) {
+        established.push({
+          id: m.id,
+          memberName: m.name,
+          username: m.username,
+          avatarUrl: m.avatarUrl,
+          online: m.online,
+          statusText: m.statusText,
+          messages: hasRealMsgs ? msgs : m.defaultMessages
+        });
+      }
+    });
+
+    established.sort((a, b) => {
+      const timeA = a.messages.length > 0 ? (a.messages[a.messages.length - 1].timestamp || 0) : 0;
+      const timeB = b.messages.length > 0 ? (b.messages[b.messages.length - 1].timestamp || 0) : 0;
+      return timeB - timeA;
+    });
+
+    return [communityChat, savedChat, ...established];
+  }, [allAvailableMembers, allRtdbChats, explicitChatIds]);
+
+  const handleAddOrOpenChat = (member: any) => {
+    setExplicitChatIds(prev => Array.from(new Set([...prev, member.id, member.name, member.memberName].filter(Boolean))));
+    setActiveDMMember(member.id);
+    setShowAddContactDropdown(false);
+    onToast(`Started a chat with ${member.name || member.memberName}!`);
+  };
+
+  const rtdbMessages = React.useMemo(() => {
+    if (!activeDMMember) return [];
+    if (activeDMMember === 'community_chat') return allRtdbChats.community;
+    if (activeDMMember === 'saved_messages') return allRtdbChats.saved;
+    const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
+    return allRtdbChats.direct[activeChat?.id || getUserRtdbKey(activeDMMember)] || allRtdbChats.direct[`name_${(activeDMMember || '').toLowerCase()}`] || activeChat?.messages || [];
+  }, [activeDMMember, allRtdbChats, dmChats]);
 
   const handleSendDM = (e: React.FormEvent) => {
     e.preventDefault();
@@ -518,75 +737,112 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const userMsgText = activeDMInput.trim();
     setActiveDMInput('');
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const nowTs = Date.now();
 
-    const myId = sanitizeRtdbKey(currentUser?.email || currentUser?.name || auth.currentUser?.email || 'guest');
-    const targetId = sanitizeRtdbKey(activeDMMember);
-    const chatId = [myId, targetId].sort().join('_');
+    if (activeDMMember === 'community_chat') {
+      push(ref(rtdb, `chats/community_chat`), {
+        sender: 'me',
+        senderId: myId,
+        senderName: currentUser?.name || auth.currentUser?.displayName || 'Me',
+        senderAvatar: currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Alex')}&background=2563EB&color=fff`,
+        text: userMsgText,
+        time: nowTime,
+        timestamp: nowTs,
+        hearted: false,
+        reactions: []
+      });
+      if (onRewardXP) onRewardXP(5, 'engagement', 'Posting in Community Chat');
+      return;
+    }
 
-    // 1. Push user message to Firebase RTDB!
+    if (activeDMMember === 'saved_messages') {
+      push(ref(rtdb, `chats/saved_messages_${myId}`), {
+        sender: 'me',
+        senderId: myId,
+        senderName: 'Me',
+        text: userMsgText,
+        time: nowTime,
+        timestamp: nowTs,
+        hearted: false,
+        reactions: []
+      });
+      return;
+    }
+
+    const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
+    const targetId = activeChat ? activeChat.id : getUserRtdbKey(activeDMMember);
+    const targetName = activeChat ? activeChat.memberName : activeDMMember;
+    const chatId = [myId, targetId].sort().join('___');
+
     push(ref(rtdb, `chats/${chatId}`), {
       sender: 'me',
+      senderId: myId,
       senderName: currentUser?.name || auth.currentUser?.displayName || 'Me',
+      senderAvatar: currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Alex')}&background=2563EB&color=fff`,
+      receiverId: targetId,
+      receiverName: targetName,
       text: userMsgText,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      timestamp: Date.now(),
+      time: nowTime,
+      timestamp: nowTs,
       hearted: false,
       reactions: []
     });
 
-    // Reward engagement XP
     if (onRewardXP) {
       onRewardXP(5, 'engagement', 'Sending a Direct Message');
     }
   };
 
+  const getRtdbRoomKey = (cId: string) => {
+    if (cId === 'community_chat') return 'community_chat';
+    if (cId === 'saved_messages') return `saved_messages_${myId}`;
+    return [myId, cId].sort().join('___');
+  };
+
   const handleToggleHeart = (chatId: string, messageId: string) => {
-    setDmChats(prev => prev.map(c => {
-      if (c.id === chatId) {
-        return {
-          ...c,
-          messages: c.messages.map(m => {
-            if (m.id === messageId) {
-              const newHearted = !m.hearted;
-              if (newHearted) {
-                onToast('💖 Message double-tapped! +5 XP');
-                if (onRewardXP) onRewardXP(5, 'engagement', 'Liking a Direct Message');
-              }
-              return { ...m, hearted: newHearted };
-            }
-            return m;
-          })
-        };
-      }
-      return c;
-    }));
+    const roomKey = getRtdbRoomKey(chatId);
+    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}/hearted`);
+    const legacyRoomKey = [myId, chatId].sort().join('_');
+    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}/hearted`);
+
+    const currentMsg = rtdbMessages.find(m => m.id === messageId);
+    const currentHearted = currentMsg?.hearted;
+    const nextHearted = !currentHearted;
+
+    set(msgRef, nextHearted).catch(() => {});
+    if (roomKey !== legacyRoomKey) {
+      set(legacyRef, nextHearted).catch(() => {});
+    }
+
+    if (nextHearted) {
+      onToast('💖 Message double-tapped! +5 XP');
+      if (onRewardXP) onRewardXP(5, 'engagement', 'Liking a Direct Message');
+    }
   };
 
   const handleAddReaction = (chatId: string, messageId: string, emoji: string) => {
-    setDmChats(prev => prev.map(c => {
-      if (c.id === chatId) {
-        return {
-          ...c,
-          messages: c.messages.map(m => {
-            if (m.id === messageId) {
-              const currentReactions = m.reactions || [];
-              const hasReaction = currentReactions.includes(emoji);
-              const nextReactions = hasReaction
-                ? currentReactions.filter(r => r !== emoji)
-                : [...currentReactions, emoji];
-              
-              if (!hasReaction) {
-                onToast(`Reacted with ${emoji}! +5 XP`);
-                if (onRewardXP) onRewardXP(5, 'engagement', `Reacting with ${emoji}`);
-              }
-              return { ...m, reactions: nextReactions };
-            }
-            return m;
-          })
-        };
-      }
-      return c;
-    }));
+    const roomKey = getRtdbRoomKey(chatId);
+    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}/reactions`);
+    const legacyRoomKey = [myId, chatId].sort().join('_');
+    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}/reactions`);
+
+    const currentMsg = rtdbMessages.find(m => m.id === messageId);
+    const currentReactions: string[] = currentMsg?.reactions || [];
+    const hasReaction = currentReactions.includes(emoji);
+    const nextReactions = hasReaction
+      ? currentReactions.filter(r => r !== emoji)
+      : [...currentReactions, emoji];
+
+    set(msgRef, nextReactions).catch(() => {});
+    if (roomKey !== legacyRoomKey) {
+      set(legacyRef, nextReactions).catch(() => {});
+    }
+
+    if (!hasReaction) {
+      onToast(`Reacted with ${emoji}! +5 XP`);
+      if (onRewardXP) onRewardXP(5, 'engagement', `Reacting with ${emoji}`);
+    }
   };
   // Keyboard navigation reference
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -678,7 +934,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       hasUpvoted: false,
       hasReposted: false,
       comments: [],
-      time: 'Just now',
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       timeMs: Date.now()
     };
 
@@ -691,12 +947,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
       newPostData.imageUrl = composeImageUrl;
     }
 
+    if (composeCategory === 'event') {
+      newPostData.eventDate = eventDate ? `${eventDate}${eventTime ? ' ' + eventTime : ''}` : 'Upcoming';
+      newPostData.eventTime = eventTime || 'TBA';
+      newPostData.eventVenue = eventVenue || 'MKU IT Hub / Online';
+    }
+
     try {
       await addDoc(collection(db, "posts"), cleanForFirestore(newPostData));
       setComposeText('');
       setComposeTitle('');
       setComposeCode('');
       setComposeImageUrl('');
+      setEventDate('');
+      setEventTime('');
+      setEventVenue('');
       setShowCodeForm(false);
       onToast('Post published successfully to Firestore DB!');
       if (onRewardXP) {
@@ -760,7 +1025,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       id: `c_${Date.now()}`,
       authorName: currentUser?.name || 'Alex M.',
       text: newCommentText.trim(),
-      time: 'Just now',
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       avatarUrl: currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Alex')}&background=2563EB&color=fff`
     };
 
@@ -908,27 +1173,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleStartDMFromProfile = (memberName: string) => {
     setIsBioOpen(false);
-    
-    // Check if the conversation already exists
-    const existing = dmChats.find(c => c.memberName.toLowerCase() === memberName.toLowerCase());
-    if (existing) {
-      setActiveDMMember(existing.memberName);
-    } else {
-      // Create a brand new active conversation!
-      const newId = `chat_${Date.now()}`;
-      const newChat = {
-        id: newId,
-        memberName: memberName,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(memberName)}&background=3B82F6&color=fff`,
-        online: true,
-        messages: [
-          { id: 'welcome', sender: 'them', text: `Hi there! I am ${memberName}. Nice to connect with you on MKU Connect.`, time: 'Just now' }
-        ]
-      };
-      setDmChats(prev => [newChat, ...prev]);
-      setActiveDMMember(memberName);
-    }
-    
+    const mem = allAvailableMembers.find(m => m.memberName.toLowerCase() === memberName.toLowerCase() || m.id === memberName) || {
+      id: getUserRtdbKey(memberName),
+      memberName: memberName
+    };
+    setExplicitChatIds(prev => Array.from(new Set([...prev, mem.id, mem.memberName].filter(Boolean))));
+    setActiveDMMember(mem.id);
     setIsDMWidgetExpanded(true);
     onToast(`Opened direct message conversation with ${memberName}`);
   };
@@ -1016,9 +1266,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => {
                   const newState = !isDMWidgetExpanded;
                   setIsDMWidgetExpanded(newState);
-                  if (newState && !activeDMMember) {
-                    setActiveDMMember(FORUM_MEMBERS[0]?.name || ''); // Auto-load first chat
-                  }
                   onToast(newState ? 'Opening dedicated social messaging platform...' : 'Direct messages collapsed');
                 }}
                 className={`relative p-2 rounded-full border transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0 ${
@@ -1059,6 +1306,42 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
 
+            {composeCategory === 'event' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 animate-slide-up">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Event Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="w-full bg-white text-xs font-bold text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Event Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
+                    className="w-full bg-white text-xs font-bold text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Venue / Location</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. IT Hub Room 102 or Meet Link"
+                    value={eventVenue}
+                    onChange={(e) => setEventVenue(e.target.value)}
+                    className="w-full bg-white text-xs font-bold text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-400"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="relative">
               <textarea
                 value={composeText}
@@ -1067,7 +1350,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   setComposeText(val);
                   checkMentionTrigger(val, 'post');
                 }}
-                placeholder={composeCategory === 'announcement' ? "Describe the announcement details..." : composeCategory === 'event' ? "Describe the event schedule and venue details..." : "What's happening in MKU IT?"}
+                placeholder={composeCategory === 'announcement' ? "Describe the announcement details..." : composeCategory === 'event' ? "Describe the event schedule and venue details..." : DYNAMIC_POST_PROMPTS[promptIndex] || "Got a bug? Wanna ask a question? What's in your mind?"}
                 maxLength={280}
                 rows={Math.max(2, Math.ceil(composeText.length / 60))}
                 className="w-full bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none font-medium resize-none leading-relaxed"
@@ -1127,8 +1410,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
 
             {/* Compose Actions row */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-              <div className="flex items-center gap-1 text-blue-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50 min-w-0">
+              <div className="flex flex-wrap items-center gap-1 text-blue-500 min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => setShowCodeForm(!showCodeForm)}
@@ -1164,7 +1447,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <select
                   value={composeCategory}
                   onChange={(e: any) => setComposeCategory(e.target.value)}
-                  className="bg-transparent border-0 text-[10px] text-slate-500 font-bold ml-1 cursor-pointer focus:outline-none focus:ring-0"
+                  className="bg-transparent border-0 text-[10px] text-slate-500 font-bold ml-0.5 cursor-pointer focus:outline-none focus:ring-0 max-w-[105px] sm:max-w-none truncate shrink-0"
                 >
                   <option value="code_share">#CodeShare</option>
                   <option value="question">#Question</option>
@@ -1174,7 +1457,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                 {composeText.length > 0 && (
                   <span className="text-[10px] text-slate-400 font-semibold">
                     {280 - composeText.length}
@@ -1215,18 +1498,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   key={post.id} 
                   className={`transition-all ${
                     post.type === 'announcement' 
-                      ? 'bg-blue-600 text-white shadow-xl my-3 mx-2 rounded-2xl border border-blue-500 p-1' 
+                      ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-sm my-2 mx-3 sm:mx-4 rounded-2xl border border-blue-500/40 text-xs sm:text-[13px]' 
                       : post.type === 'event' 
-                      ? 'border-l-4 border-amber-500 bg-amber-50/10 hover:bg-amber-50/15 shadow-sm my-3 mx-2 rounded-2xl border border-amber-200/50 p-1' 
+                      ? 'border-l-4 border-amber-500 bg-amber-50/10 hover:bg-amber-50/15 shadow-sm my-1 mx-1 sm:mx-1.5 rounded-xl border border-amber-200/50' 
                       : 'border-transparent border-b border-slate-100 hover:bg-slate-50/40'
                   }`}
                 >
-                  <article className="p-4 flex gap-3 relative">
+                  <article className={`flex relative ${post.type === 'announcement' || post.type === 'event' ? 'py-2 px-2.5 sm:px-3 gap-2.5' : 'py-2.5 px-3 sm:px-4 gap-3'}`}>
                     
                     {/* Left Column: Avatar */}
                     <div 
                       onClick={(e) => handleOpenBio(post.author.name, e)}
-                      className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0 cursor-pointer hover:opacity-90"
+                      className={`${post.type === 'announcement' ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden border border-slate-200 shrink-0 cursor-pointer hover:opacity-90`}
                       title={`View ${post.author.name}'s detailed profile`}
                     >
                       <img 
@@ -1241,7 +1524,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       
                       {/* Announcement Pinned Banner */}
                       {post.type === 'announcement' && (
-                        <div className="mb-2 bg-white/20 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 uppercase tracking-wider border border-white/30 w-max shadow-sm">
+                        <div className="mb-1 bg-white/20 text-white font-extrabold text-[9px] px-2 py-0.5 rounded inline-flex items-center gap-1 uppercase tracking-wider border border-white/30 w-max shadow-sm">
                           <Megaphone className="w-3 h-3 text-white" />
                           OFFICIAL PINNED ANNOUNCEMENT
                         </div>
@@ -1296,7 +1579,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
 
                           {post.title && (
-                            <span className={`text-[12px] font-black tracking-tight ${post.type === 'announcement' ? 'text-white font-extrabold text-sm' : 'text-slate-700 font-extrabold'}`}>
+                            <span className={`text-[12px] font-black tracking-tight ${post.type === 'announcement' ? 'text-white font-bold text-xs sm:text-sm' : 'text-slate-700 font-extrabold'}`}>
                               {post.title}
                             </span>
                           )}
@@ -1310,11 +1593,35 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         )}
                       </div>
 
+                      {/* Event Details Badge Box */}
+                      {post.type === 'event' && (
+                        <div className="mt-2.5 bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 flex flex-wrap items-center gap-4 text-xs text-amber-900 font-bold shadow-sm">
+                          {post.eventDate && (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>Date: {post.eventDate.split(' ')[0]}</span>
+                            </div>
+                          )}
+                          {post.eventTime && (
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>Time: {post.eventTime}</span>
+                            </div>
+                          )}
+                          {post.eventVenue && (
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>Venue: {post.eventVenue}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Post Content text */}
-                      <p className={`mt-1.5 leading-relaxed whitespace-pre-wrap font-sans ${
+                      <p className={`mt-1 leading-relaxed whitespace-pre-wrap font-sans ${
                         post.type === 'announcement' 
-                          ? 'text-[15px] font-bold text-white tracking-normal' 
-                          : 'text-[14px] text-slate-800 font-medium'
+                          ? 'text-xs sm:text-[13px] font-semibold text-white tracking-normal leading-snug' 
+                          : 'text-[13px] sm:text-[14px] text-slate-800 font-medium leading-snug'
                       }`}>
                         {renderWithMentions(post.content, onToast)}
                       </p>
@@ -1554,7 +1861,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {activeDMMember ? (
             /* ACTIVE CONVERSATION FLOW (Custom themed based on dmSocialStyle) */
             (() => {
-              const activeChat = dmChats.find(c => c.memberName === activeDMMember);
+              const activeChat = dmChats.find(c => c.id === activeDMMember || c.memberName === activeDMMember || c.memberName.toLowerCase() === (activeDMMember || '').toLowerCase());
+              const chatIdToUse = activeChat?.id || activeDMMember || '';
               
               // OmniChat Combo Theme styling: Deep slate and subtle neon hues
               const headerStyles = 'bg-slate-950 text-white border-b border-slate-800 py-3.5 px-4 shadow-md';
@@ -1575,8 +1883,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       
                       <div className="relative shrink-0">
                         <img 
-                          src={activeChat?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeDMMember)}`} 
-                          alt={activeDMMember} 
+                          src={activeChat?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeDMMember || 'User')}`} 
+                          alt={activeChat?.memberName || activeDMMember || ''} 
                           className="w-9 h-9 rounded-full object-cover border border-white/25 shadow-md" 
                         />
                         {activeChat?.online && (
@@ -1586,8 +1894,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                       <div className="min-w-0 flex flex-col">
                         <div className="flex items-center gap-1">
-                          <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-white">{activeDMMember}</h4>
-                          <span className="text-[9px] text-slate-400 font-medium">{activeChat?.username}</span>
+                          <h4 className="font-extrabold text-xs sm:text-sm truncate tracking-tight text-white">{activeChat?.memberName || activeDMMember}</h4>
+                          {activeChat?.username && <span className="text-[9px] text-slate-400 font-medium">{activeChat.username}</span>}
                         </div>
                         <span className="text-[10px] text-blue-400 font-extrabold tracking-wide uppercase">
                           {activeChat?.typing ? (
@@ -1595,7 +1903,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
                               typing...
                             </span>
-                          ) : activeChat?.online ? 'online' : 'offline (last seen recently)'}
+                          ) : activeChat?.statusText || (activeChat?.online ? 'ONLINE' : 'OFFLINE (LAST SEEN RECENTLY)')}
                         </span>
                       </div>
                     </div>
@@ -1614,7 +1922,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       return (
                         <div 
                           key={m.id}
-                          onDoubleClick={() => handleToggleHeart(activeChat.id, m.id)}
+                          onDoubleClick={() => handleToggleHeart(chatIdToUse, m.id)}
                           className={`max-w-[85%] relative px-4 py-2.5 text-[12px] font-semibold leading-relaxed transition-all duration-200 select-none cursor-pointer group ${bubbleStyle}`}
                           title="Double-tap to heart message!"
                         >
@@ -1626,7 +1934,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAddReaction(activeChat.id, m.id, emoji);
+                                  handleAddReaction(chatIdToUse, m.id, emoji);
                                 }}
                                 className="hover:scale-125 transition-transform p-0.5"
                               >
@@ -1634,6 +1942,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               </button>
                             ))}
                           </div>
+
+                          {activeDMMember === 'community_chat' && !isMe && (
+                            <div className="flex items-center gap-1.5 mb-1 pb-1 border-b border-slate-100">
+                              {m.senderAvatar && <img src={m.senderAvatar} className="w-3.5 h-3.5 rounded-full object-cover" alt="" />}
+                              <span className="text-[10px] font-extrabold text-blue-600">{m.senderName || 'Member'}</span>
+                            </div>
+                          )}
 
                           <p>{renderWithMentions(m.text, onToast)}</p>
                           
@@ -1731,7 +2046,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <div
                     key={chat.id}
                     onClick={() => {
-                      setActiveDMMember(chat.memberName);
+                      setActiveDMMember(chat.id);
                       onToast(`Opened direct message conversation with ${chat.memberName}`);
                     }}
                     className={`p-3 flex items-center justify-between gap-3 hover:bg-white transition-colors cursor-pointer rounded-xl mx-1 my-1 border ${chat.id === 'saved_messages' ? 'bg-indigo-50/40 border-indigo-100/50' : 'border-slate-100'}`}
@@ -1756,19 +2071,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           )}
                         </div>
                         <p className="text-[10.5px] text-slate-400 font-medium truncate mt-0.5">
-                          {chat.messages.length > 0 ? chat.messages[chat.messages.length - 1].text : 'No messages'}
+                          {chat.messages.length > 0 ? chat.messages[chat.messages.length - 1].text : 'No messages yet'}
                         </p>
                       </div>
                     </div>
                     
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {chat.online ? (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          online
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          {chat.statusText || 'ONLINE'}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-medium text-slate-400 bg-slate-100 border border-slate-250 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          offline (last seen)
+                        <span className="text-[9px] font-medium text-slate-400 bg-slate-100 border border-slate-250 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          {chat.statusText || 'OFFLINE'}
                         </span>
                       )}
                     </div>
@@ -1799,9 +2114,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </button>
                     </div>
                     <div className="space-y-1 max-h-48 overflow-y-auto no-scrollbar">
-                      {FORUM_MEMBERS.map((member) => (
+                      {allAvailableMembers.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((member) => (
                         <button
-                          key={member.name}
+                          key={member.id || member.name}
                           onClick={() => handleAddOrOpenChat(member)}
                           className="w-full text-left p-2 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
@@ -1813,7 +2128,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <div className="min-w-0">
                             <h6 className="text-xs font-bold text-slate-800 truncate">{member.name}</h6>
                             <p className="text-[9px] text-slate-400 font-medium truncate">
-                              {member.username} • {member.online ? 'Online' : 'Offline'}
+                              {member.username} • {member.statusText || (member.online ? 'Online' : 'Offline')}
                             </p>
                           </div>
                         </button>

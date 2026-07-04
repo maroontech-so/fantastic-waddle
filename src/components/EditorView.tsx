@@ -54,6 +54,12 @@ interface EditorViewProps {
 
 const TEMPLATES = [
   {
+    title: 'Hello World',
+    html: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Hello World</title>\n</head>\n<body>\n  <div class="container">\n    <h1>Hello, World!</h1>\n    <p>Welcome to &lt;/AdvocoDe&gt; Playground. Update and customize your code here!</p>\n    <button id="btn">Click Me!</button>\n  </div>\n</body>\n</html>`,
+    css: `body {\n  margin: 0;\n  background: #0f172a;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;\n}\n.container {\n  background: #1e293b;\n  color: white;\n  border: 1px solid #334155;\n  padding: 32px 48px;\n  border-radius: 20px;\n  text-align: center;\n  box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  max-width: 400px;\n}\nh1 {\n  margin: 0 0 10px 0;\n  font-size: 28px;\n  color: #38bdf8;\n}\np {\n  color: #94a3b8;\n  font-size: 14px;\n  line-height: 1.5;\n  margin: 0 0 24px 0;\n}\n#btn {\n  background: linear-gradient(135deg, #3b82f6, #6366f1);\n  color: white;\n  border: none;\n  padding: 12px 28px;\n  font-size: 14px;\n  font-weight: bold;\n  border-radius: 12px;\n  cursor: pointer;\n  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);\n  transition: all 0.2s;\n}\n#btn:hover {\n  transform: translateY(-2px);\n  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);\n}`,
+    js: `document.getElementById('btn').addEventListener('click', () => {\n  alert('Hello World! Welcome to <AdvocoDe> interactive IDE.');\n});`
+  },
+  {
     title: 'Pulse Button',
     html: `<div class="container">\n  <button class="apple-btn">Tap Me</button>\n</div>`,
     css: `body {\n  margin: 0;\n  background: #0f172a;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  font-family: -apple-system, BlinkMacSystemFont, sans-serif;\n}\n.apple-btn {\n  background: linear-gradient(135deg, #3b82f6, #6366f1);\n  color: white;\n  border: none;\n  padding: 12px 30px;\n  font-size: 14px;\n  font-weight: 600;\n  border-radius: 12px;\n  cursor: pointer;\n  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);\n  transition: all 0.2s;\n  animation: pulse 2s infinite;\n}\n@keyframes pulse {\n  0% { transform: scale(1); }\n  50% { transform: scale(1.05); }\n  100% { transform: scale(1); }\n}`,
@@ -226,10 +232,26 @@ const customJs = javascriptLanguage.data.of({ autocomplete: jsCompletions });
 
 export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, onClearInitialCode }) => {
   const [activeTab, setActiveTab] = useState<'html' | 'css' | 'js'>('html');
-  const [htmlCode, setHtmlCode] = useState(TEMPLATES[0].html);
-  const [cssCode, setCssCode] = useState(TEMPLATES[0].css);
-  const [jsCode, setJsCode] = useState(TEMPLATES[0].js);
-  const [title, setTitle] = useState('My First App');
+  const [htmlCode, setHtmlCode] = useState(() => {
+    const saved = localStorage.getItem('advocode_ide_progress');
+    if (saved) { try { return JSON.parse(saved).html || TEMPLATES[0].html; } catch(e){} }
+    return TEMPLATES[0].html;
+  });
+  const [cssCode, setCssCode] = useState(() => {
+    const saved = localStorage.getItem('advocode_ide_progress');
+    if (saved) { try { return JSON.parse(saved).css || TEMPLATES[0].css; } catch(e){} }
+    return TEMPLATES[0].css;
+  });
+  const [jsCode, setJsCode] = useState(() => {
+    const saved = localStorage.getItem('advocode_ide_progress');
+    if (saved) { try { return JSON.parse(saved).js || TEMPLATES[0].js; } catch(e){} }
+    return TEMPLATES[0].js;
+  });
+  const [title, setTitle] = useState(() => {
+    const saved = localStorage.getItem('advocode_ide_progress');
+    if (saved) { try { return JSON.parse(saved).title || TEMPLATES[0].title; } catch(e){} }
+    return TEMPLATES[0].title;
+  });
   const [savedSnippets, setSavedSnippets] = useState<SavedSnippet[]>([]);
   const [activeTemplateIdx, setActiveTemplateIdx] = useState(0);
 
@@ -331,9 +353,12 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
 
   // Run automatically on load or manual triggers
   useEffect(() => {
-    const timeout = setTimeout(updatePreview, 800);
+    const timeout = setTimeout(() => {
+      updatePreview();
+      localStorage.setItem('advocode_ide_progress', JSON.stringify({ html: htmlCode, css: cssCode, js: jsCode, title }));
+    }, 800);
     return () => clearTimeout(timeout);
-  }, [htmlCode, cssCode, jsCode]);
+  }, [htmlCode, cssCode, jsCode, title]);
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -456,7 +481,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
 
   // Open share overlay
   const handleOpenShareModal = () => {
-    setShareText(`Check out my awesome project "${title}" coded in LM IDE! 🚀`);
+    setShareText('');
     setIsShareModalOpen(true);
   };
 
@@ -491,7 +516,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
       hasUpvoted: true,
       hasReposted: false,
       comments: [],
-      time: 'Just now',
+      time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       timeMs: Date.now()
     };
 
@@ -578,7 +603,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
       );
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] md:h-[calc(100vh-73px)] overflow-hidden bg-slate-55 font-sans relative animate-fade-in" id="lm-ide-root">
+    <div className="flex flex-col md:flex-row w-full h-full flex-1 overflow-hidden bg-slate-900 font-sans relative animate-fade-in" id="lm-ide-root">
       
       {/* LEFT IDE WORKSPACE (Visible on mobile if mode is 'editor' OR on desktop always) */}
       <div className={`flex-1 flex flex-col h-full bg-white border-r border-slate-200/80 ${mobileView === 'preview' ? 'hidden md:flex' : 'flex'}`}>
@@ -865,13 +890,13 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
               </p>
 
               <div>
-                <label className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1.5 block">Your Post Message</label>
+                <label className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1.5 block">Custom Share Message & Description</label>
                 <textarea
                   value={shareText}
                   onChange={(e) => setShareText(e.target.value)}
-                  placeholder="Describe your creation..."
-                  maxLength={160}
-                  rows={3}
+                  placeholder="Write a custom message or description about what your code does, how to interact with it, or what you learned..."
+                  maxLength={500}
+                  rows={4}
                   className="w-full bg-slate-50 text-xs text-slate-800 placeholder-slate-400 border border-slate-200/80 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-semibold resize-none"
                 />
               </div>
