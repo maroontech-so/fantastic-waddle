@@ -193,7 +193,7 @@ export const BottomNav: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/75 backdrop-blur-lg border border-slate-200/50 rounded-2xl shadow-xl shadow-slate-200/50 z-40 h-16">
+    <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/85 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xl shadow-slate-300/40 dark:shadow-black/60 z-40 h-16 transition-all duration-300">
       <div className="flex h-full items-center justify-around px-1.5">
         {tabs.map((tab) => {
           const IconComponent = tab.icon;
@@ -208,18 +208,18 @@ export const BottomNav: React.FC<NavigationProps> = ({
               <div
                 className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 flex items-center justify-center ${
                   isActive
-                    ? 'bg-blue-600 text-white scale-105 shadow-md shadow-blue-500/20'
-                    : 'text-slate-400 hover:bg-slate-50'
+                    ? 'bg-blue-600 text-white scale-105 shadow-md shadow-blue-500/30'
+                    : 'text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 <IconComponent className="w-4.5 h-4.5" />
                 {tab.badge && (
-                  <span className={`absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full border border-white ${isActive ? 'bg-white' : 'bg-blue-600'}`}></span>
+                  <span className={`absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full border border-white dark:border-slate-900 ${isActive ? 'bg-white' : 'bg-blue-500'}`}></span>
                 )}
               </div>
               <span
                 className={`text-[9px] mt-0.5 transition-all duration-200 ${
-                  isActive ? 'font-bold text-slate-800' : 'font-medium text-slate-400'
+                  isActive ? 'font-extrabold text-blue-600 dark:text-blue-400' : 'font-medium text-slate-500 dark:text-slate-400'
                 }`}
               >
                 {tab.label}

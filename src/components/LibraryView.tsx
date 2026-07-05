@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Home, ChevronRight, ChevronLeft, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy, ArrowLeft, Minus } from 'lucide-react';
+import { Search, Home, ChevronRight, ChevronLeft, Folder, MoreVertical, LayoutGrid, List, FileText, Link as LinkIcon, Archive, FileCode, Download, ExternalLink, Plus, UploadCloud, X, Github, GraduationCap, BookOpen, Sparkles, Code2, ArrowRight, Award, Compass, BookOpenCheck, Copy, ArrowLeft, Minus, Trash2, FolderPlus, FilePlus, RefreshCw, FileText as FileTextIcon } from 'lucide-react';
 import { LibraryFolder, LibraryFile, FileType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import tutorialData from '../tutorial.json';
 import { getTemplateForTopic, getTemplateForProject, getAllLessonsFromTutorial, TutorialTopicItem } from '../utils/tutorialSandbox';
+import { listStorageItems, createStorageDirectory, createStorageMaterial, uploadStorageFile, deleteStorageItem, PuterItem, isPuterAvailable } from '../utils/puterStorage';
 
 interface LibraryViewProps {
   folders: LibraryFolder[];
@@ -37,12 +38,38 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedFileObj, setSelectedFileObj] = useState<File | null>(null);
 
-  // Dynamic tutorial states
-  const [activeLessonIndex, setActiveLessonIndex] = useState<number>(0);
+  // Puter Storage Backend States
+  const [currentPath, setCurrentPath] = useState<string>('/');
+  const [puterItems, setPuterItems] = useState<PuterItem[]>([]);
+  const [isLoadingStorage, setIsLoadingStorage] = useState<boolean>(false);
+  const [isNewDirModalOpen, setIsNewDirModalOpen] = useState<boolean>(false);
+  const [newDirName, setNewDirName] = useState<string>('');
+  const [isNewMaterialModalOpen, setIsNewMaterialModalOpen] = useState<boolean>(false);
+  const [newMatName, setNewMatName] = useState<string>('');
+  const [newMatContent, setNewMatContent] = useState<string>('');
+  const [isTocModalOpen, setIsTocModalOpen] = useState<boolean>(false);
+
+  // Dynamic tutorial states with local progress saving
+  const [activeLessonIndex, setActiveLessonIndex] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('advocode_tutorial_last_stop');
+      return saved ? parseInt(saved, 10) || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('advocode_tutorial_last_stop', String(activeLessonIndex));
+    } catch (e) {}
+  }, [activeLessonIndex]);
+
   const [isViewingCapstone, setIsViewingCapstone] = useState<boolean>(false);
   const [selectedPartIndex, setSelectedPartIndex] = useState<number>(0);
-  const [isViewingDocument, setIsViewingDocument] = useState<boolean>(false);
+  const [isViewingDocument, setIsViewingDocument] = useState<boolean>(true);
   const [pdfZoom, setPdfZoom] = useState<number>(100);
   const [expandedChapterIndex, setExpandedChapterIndex] = useState<number | null>(0);
   const [expandedTopicTitle, setExpandedTopicTitle] = useState<string | null>(null);
@@ -54,6 +81,31 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       return [];
     }
   });
+
+  const refreshStorage = async () => {
+    setIsLoadingStorage(true);
+    try {
+      const cached = localStorage.getItem(`advocode_puter_cache_${currentPath}`);
+      if (cached && puterItems.length === 0) {
+        setPuterItems(JSON.parse(cached));
+      }
+    } catch (e) {}
+    try {
+      const items = await listStorageItems(currentPath);
+      setPuterItems(items);
+      localStorage.setItem(`advocode_puter_cache_${currentPath}`, JSON.stringify(items));
+    } catch (e) {
+      console.log("Offline or error loading storage, using cached directory contents.");
+    } finally {
+      setIsLoadingStorage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSubTab === 'files') {
+      refreshStorage();
+    }
+  }, [currentPath, activeSubTab]);
 
   useEffect(() => {
     if (activeSubTab === 'tutorials') {
@@ -145,17 +197,37 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     return matchesCategory && matchesSearch;
   });
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleNextLessonWithAutoMark = () => {
+    const currentTopic = allSyllabusLessons[activeLessonIndex]?.topic;
+    if (currentTopic && !masteredLessons.includes(currentTopic)) {
+      const nextMastered = [...masteredLessons, currentTopic];
+      setMasteredLessons(nextMastered);
+      try {
+        localStorage.setItem('mku_mastered_lessons', JSON.stringify(nextMastered));
+      } catch (e) {}
+      onRewardXP?.(15, 'learning', `Mastered lesson: ${currentTopic}`);
+    }
+    setActiveLessonIndex((prev) => Math.min(allSyllabusLessons.length - 1, prev + 1));
+  };
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fileName.trim()) {
       onToast('Enter a valid file name');
       return;
     }
 
+    if (selectedFileObj) {
+      await uploadStorageFile(currentPath, selectedFileObj);
+    } else {
+      await createStorageMaterial(currentPath, fileName.includes('.') ? fileName : `${fileName}.${fileType === 'link' ? 'url' : fileType}`, `[Resource added in category: ${fileCategory}]`);
+    }
+    await refreshStorage();
+
     const newFile: LibraryFile = {
       id: `file_${Date.now()}`,
       name: fileName.includes('.') ? fileName : `${fileName}.${fileType === 'link' ? 'url' : fileType}`,
-      size: fileType === 'link' ? 'Link' : fileSize,
+      size: selectedFileObj ? `${Math.round(selectedFileObj.size / 1024)} KB` : (fileType === 'link' ? 'Link' : fileSize),
       type: fileType,
       uploader: 'You',
       time: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -164,7 +236,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
     onAddFile(newFile);
     setIsUploadOpen(false);
-    onToast(`Uploaded ${newFile.name}`);
+    setSelectedFileObj(null);
+    onToast(`☁️ Saved resource to Puter.js cloud storage: ${newFile.name}`);
     
     setFileName('');
     setFileType('pdf');
@@ -222,32 +295,28 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           </button>
         </div>
 
-        {/* PDF Reader Top Toolbar */}
-        <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-2.5 pt-14 md:pt-2.5 flex flex-wrap gap-3 items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 select-none shadow-xs">
-          {/* Back to Catalog / Table of Contents */}
-          <button
-            onClick={() => setIsViewingDocument(false)}
-            className="hidden md:flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{activeSubTab === 'tutorials' ? 'Table of Contents' : 'Library Catalog'}</span>
-          </button>
-
-          {/* Document Title */}
-          <div className="hidden md:flex items-center gap-2 max-w-xs lg:max-w-md">
-            <span className="bg-red-600 text-white font-bold text-[8.5px] px-1.5 py-0.5 rounded tracking-widest uppercase">
-              PDF
-            </span>
-            <span className="text-xs font-semibold text-slate-300 truncate">
-              {isViewingCapstone 
-                ? `AdvocoDe_Graduation_Portal.pdf` 
-                : `AdvocoDe_Syllabus_Lesson_${activeLessonIndex + 1}.pdf`
-              }
+        {/* Unified Curriculum Mastery & Linear Horizontal Flex Reader Toolbar */}
+        <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 shrink-0 select-none shadow-xs">
+          {/* Left: Mastery Stats & TOC button */}
+          <div className="flex items-center justify-between md:justify-start gap-3 shrink-0">
+            <button
+              onClick={() => setIsTocModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-slate-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-blue-700 dark:text-slate-200 font-extrabold rounded-xl text-xs transition-all cursor-pointer shadow-xs border border-blue-200 dark:border-slate-700"
+            >
+              <BookOpen className="w-4 h-4 text-indigo-500 group-hover:text-white" />
+              <span>Table of Contents</span>
+            </button>
+            <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-300">
+              <Award className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>Mastery: <strong className="text-blue-600 dark:text-blue-400 font-black">{masteredLessons.length}</strong>/{allSyllabusLessons.length}</span>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[150px] hidden lg:inline">
+              {isViewingCapstone ? 'Graduation Capstone' : current?.topic || 'Lesson'}
             </span>
           </div>
 
-          {/* Page Controls */}
-          <div className="flex items-center gap-1.5 bg-slate-900/60 px-2 py-1 rounded-lg">
+          {/* Right: Linear Horizontal Flex Toolbar (Prev, Page X of Y, Next, Download, Mark Mastered) */}
+          <div className="flex items-center justify-between sm:justify-end gap-1.5 shrink-0 overflow-x-auto no-scrollbar py-0.5">
             <button
               disabled={isViewingCapstone ? false : activeLessonIndex === 0}
               onClick={() => {
@@ -258,47 +327,33 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   setActiveLessonIndex(prev => Math.max(0, prev - 1));
                 }
               }}
-              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center"
-              title="Previous Page"
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold disabled:opacity-40 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+              title="Previous Lesson"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
             </button>
-            <span className="text-[11px] font-mono text-slate-300 min-w-[90px] text-center">
-              Page {isViewingCapstone ? allSyllabusLessons.length + 1 : activeLessonIndex + 1} of {allSyllabusLessons.length + 1}
+
+            <span className="text-xs font-mono font-bold px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700 shrink-0 text-center">
+              {isViewingCapstone ? `Final/${allSyllabusLessons.length}` : `${activeLessonIndex + 1} of ${allSyllabusLessons.length}`}
             </span>
+
             <button
               disabled={isViewingCapstone}
               onClick={() => {
                 if (activeLessonIndex === allSyllabusLessons.length - 1) {
                   setIsViewingCapstone(true);
+                  onToast("🎓 Entered Capstone Projects Graduation Area!");
                 } else {
-                  setActiveLessonIndex(prev => Math.min(allSyllabusLessons.length - 1, prev + 1));
+                  handleNextLessonWithAutoMark();
                 }
               }}
-              className="p-1 hover:bg-slate-750 rounded text-slate-300 hover:text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center"
-              title="Next Page"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold disabled:opacity-40 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-xs shrink-0"
+              title="Next Lesson (Auto-marks as read)"
             >
-              <ChevronRight className="w-4 h-4" />
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {!isViewingCapstone && (
-              <button
-                onClick={(e) => handleToggleMastered(current?.topic, e)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  masteredLessons.includes(current?.topic)
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <BookOpenCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">
-                  {masteredLessons.includes(current?.topic) ? 'Mastered' : 'Mark Mastered'}
-                </span>
-              </button>
-            )}
 
             <button
               onClick={() => {
@@ -308,11 +363,28 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   onToast(`Download Started: Lesson_${activeLessonIndex + 1}_Documentation.pdf`);
                 }
               }}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              title="Download Document"
+              className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0"
+              title="Download Lesson Doc"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">DL</span>
             </button>
+
+            {!isViewingCapstone && (
+              <button
+                onClick={(e) => handleToggleMastered(current?.topic, e)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  masteredLessons.includes(current?.topic)
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <BookOpenCheck className="w-3.5 h-3.5" />
+                <span>
+                  {masteredLessons.includes(current?.topic) ? 'Mastered ✓' : 'Master'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -542,176 +614,168 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             </a>
           </div>
 
-          {/* Search Input for Mobile */}
-          <div className="md:hidden relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search global files..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/70 backdrop-blur-md pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          {/* Puter Cloud Storage Toolbar & Breadcrumb */}
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-x-auto no-scrollbar">
+                <button
+                  onClick={() => setCurrentPath('/')}
+                  className="hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Home className="w-4 h-4 text-blue-500" />
+                  <span>Cloud Storage Root</span>
+                </button>
+                {currentPath !== '/' && currentPath.split('/').filter(Boolean).map((seg, idx, arr) => {
+                  const subPath = '/' + arr.slice(0, idx + 1).join('/');
+                  return (
+                    <React.Fragment key={subPath}>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <button
+                        onClick={() => setCurrentPath(subPath)}
+                        className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded font-extrabold text-[10px] uppercase tracking-wider hover:bg-blue-100 transition-colors cursor-pointer shrink-0"
+                      >
+                        {seg}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
 
-          {/* Clean Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Home className="w-3.5 h-3.5" />
-              <span>Root Directory</span>
-            </button>
-            {selectedCategory && (
-              <>
-                <ChevronRight className="w-3 h-3 text-slate-300" />
-                <span className="text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded font-extrabold uppercase text-[9px] tracking-wider">
-                  {selectedCategory}
+              {/* Action Buttons & Status */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <span className="text-[10px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {isPuterAvailable() ? 'Puter.js Cloud Active' : 'Offline Storage Active'}
                 </span>
-              </>
-            )}
-          </div>
 
-      {/* Collection Cards Grid */}
-      <div>
-        <h3 className="font-extrabold text-xs uppercase tracking-widest text-slate-400 mb-3">Folders</h3>
-        <div id="folder-grid" className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {folders.map((folder) => {
-            const isSelected = selectedCategory === folder.name;
-            return (
-              <div
-                key={folder.id}
-                onClick={() => {
-                  setSelectedCategory(isSelected ? null : folder.name);
-                  onToast(`Filtered: ${folder.name}`);
-                }}
-                className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer apple-active flex flex-col justify-between h-28 ${
-                  isSelected
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                    : 'glass-card text-slate-900 hover:border-blue-400'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <Folder
-                    className={`w-6 h-6 ${
-                      isSelected ? 'text-white fill-white/20' : 'text-blue-500 fill-blue-50'
-                    }`}
-                  />
-                  <MoreVertical className={`w-3.5 h-3.5 ${isSelected ? 'text-white/70' : 'text-slate-300'}`} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs tracking-tight truncate">
-                    {folder.name}
-                  </h4>
-                  <p className={`text-[9px] font-semibold mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
-                    {folder.itemsCount} elements
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                <button
+                  onClick={() => refreshStorage()}
+                  className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-colors cursor-pointer"
+                  title="Refresh Storage"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingStorage ? 'animate-spin' : ''}`} />
+                </button>
 
-      {/* Files List Title */}
-      <div className="flex justify-between items-center pt-2">
-        <h3 className="font-extrabold text-xs uppercase tracking-widest text-slate-400">
-          {selectedCategory ? `${selectedCategory}` : 'Recent Shared Files'}
-          <span className="ml-1.5 text-[9px] text-slate-400 font-extrabold bg-slate-100 px-1.5 py-0.5 rounded-full">
-            {filteredFiles.length}
-          </span>
-        </h3>
-        
-        <div className="flex gap-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-lg border cursor-pointer transition-colors ${
-              viewMode === 'grid' ? 'bg-slate-200 border-slate-300 text-slate-900' : 'bg-white border-slate-200 text-slate-400'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-lg border cursor-pointer transition-colors ${
-              viewMode === 'list' ? 'bg-slate-200 border-slate-300 text-slate-900' : 'bg-white border-slate-200 text-slate-400'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+                <button
+                  onClick={() => setIsNewDirModalOpen(true)}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-blue-500" />
+                  <span>New Folder</span>
+                </button>
 
-      {/* Shared Resource Files */}
-      {filteredFiles.length === 0 ? (
-        <div className="glass-card rounded-xl p-8 text-center text-slate-400">
-          <Folder className="w-10 h-10 text-slate-300 mx-auto mb-2 opacity-55" />
-          <p className="text-xs font-semibold text-slate-700">No resources available</p>
-        </div>
-      ) : viewMode === 'list' ? (
-        <div className="bg-white/80 backdrop-blur rounded-xl border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
-          {filteredFiles.map((file) => (
-            <div
-              key={file.id}
-              onClick={() => {
-                onToast(`Downloading: ${file.name}`);
-              }}
-              className="flex items-center gap-3 p-3 hover:bg-slate-50/70 transition-all cursor-pointer group"
-            >
-              {getFileIcon(file.type)}
-              
-              <div className="flex-1 min-w-0">
-                <h5 className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
-                  {file.name}
-                </h5>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-medium flex items-center gap-1 flex-wrap">
-                  <span className="bg-slate-100 text-slate-600 px-1 py-0.1 rounded text-[8px] uppercase font-bold">
-                    {file.category}
-                  </span>
-                  <span>• {file.size}</span>
-                  <span>• Shared by {file.uploader}</span>
-                </p>
-              </div>
+                <button
+                  onClick={() => setIsNewMaterialModalOpen(true)}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <FilePlus className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Create Material</span>
+                </button>
 
-              <div className="shrink-0">
-                <button className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 rounded-lg hover:bg-blue-50 transition-colors border border-slate-200 shadow-sm flex items-center justify-center">
-                  {file.type === 'link' ? <ExternalLink className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                <button
+                  onClick={() => setIsUploadOpen(true)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Upload File</span>
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredFiles.map((file) => (
-            <div
-              key={file.id}
-              onClick={() => {
-                onToast(`Downloading: ${file.name}`);
-              }}
-              className="glass-card p-4 rounded-xl hover:border-blue-400 hover:bg-white transition-all group flex flex-col justify-between h-32 cursor-pointer apple-active"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  {getFileIcon(file.type)}
-                  <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[8px] uppercase font-extrabold tracking-wider border border-slate-150">
-                    {file.category}
-                  </span>
-                </div>
-                <h5 className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-2">
-                  {file.name}
-                </h5>
-              </div>
+          </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] text-slate-400 font-semibold">
-                <span>{file.size} • {file.uploader}</span>
-                {file.type === 'link' ? <ExternalLink className="w-3.5 h-3.5 text-slate-400" /> : <Download className="w-3.5 h-3.5 text-slate-400" />}
-              </div>
+          {/* Puter Items Grid/List */}
+          {isLoadingStorage ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800 text-slate-400">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
+              <p className="text-xs font-bold">Loading cloud storage filesystem...</p>
             </div>
-          ))}
-        </div>
-      )}
+          ) : puterItems.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800 text-slate-400 space-y-2">
+              <Folder className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto opacity-60" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No resources found in this directory</p>
+              <p className="text-[11px]">Click &quot;Upload File&quot; or &quot;Create Material&quot; to add resources to cloud storage.</p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+              {puterItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (item.isDirectory) {
+                      setCurrentPath(item.path);
+                    } else {
+                      if (item.url) {
+                        window.open(item.url, '_blank');
+                      } else if (item.content) {
+                        onToast(`Opened material: "${item.name}"`);
+                        if (onTryCode && (item.name.endsWith('.js') || item.name.endsWith('.ts') || item.name.endsWith('.html'))) {
+                          onTryCode({ title: item.name, html: '<!-- HTML -->', css: '', js: item.content });
+                          onToast(`💻 Loaded "${item.name}" into Sandbox!`);
+                        }
+                      } else {
+                        onToast(`📥 Downloading cloud resource: ${item.name}`);
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer group"
+                >
+                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shrink-0">
+                    {item.isDirectory ? <Folder className="w-5 h-5 fill-blue-500/20" /> : getFileIcon(item.type || 'doc')}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h5 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {item.isDirectory && (
+                        <span className="text-[9px] font-black bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-500/20">
+                          Directory
+                        </span>
+                      )}
+                    </h5>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 font-semibold flex items-center gap-2">
+                      <span>{item.category || (item.isDirectory ? 'Folder' : 'File')}</span>
+                      <span>•</span>
+                      <span>{item.updatedAt || 'Today'}</span>
+                      {!item.isDirectory && item.size ? <><span>•</span><span>{Math.round(item.size / 1024) || 1} KB</span></> : null}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {!item.isDirectory && (
+                      <button
+                        onClick={() => {
+                          if (item.content && onTryCode && (item.name.endsWith('.js') || item.name.endsWith('.html') || item.name.endsWith('.ts'))) {
+                            onTryCode({ title: item.name, html: '<!-- HTML -->', css: '', js: item.content });
+                            onToast(`💻 Loaded "${item.name}" into Sandbox!`);
+                          } else if (item.url) {
+                            window.open(item.url, '_blank');
+                          } else {
+                            onToast(`📥 Downloaded: ${item.name}`);
+                          }
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
+                        title="Download / Open"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        await deleteStorageItem(currentPath, item);
+                        onToast(`🗑️ Deleted ${item.name}`);
+                        refreshStorage();
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                      title="Delete Item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       ) : isViewingDocument ? (
         renderPdfReader()
@@ -723,30 +787,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               <Award className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
               <span>Curriculum Mastery: <strong className="text-blue-600 dark:text-blue-400 font-black">{masteredLessons.length}</strong> of {allSyllabusLessons.length} topics ({Math.round((masteredLessons.length / (allSyllabusLessons.length || 1)) * 100)}%)</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg w-fit">
-              Unified Web Course
-            </span>
+            
           </div>
 
           {/* Syllabus Global Search & Filter Bar */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="🔍 Search across all 10 parts & 100+ topics (e.g., 'flexbox', 'table', 'localStorage', 'doctype', 'form')..."
-              value={syllabusSearch}
-              onChange={(e) => setSyllabusSearch(e.target.value)}
-              className="w-full bg-white pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 placeholder:text-slate-400"
-            />
-            {syllabusSearch && (
-              <button
-                onClick={() => setSyllabusSearch('')}
-                className="absolute right-3 top-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+         
 
           {/* Conditional Display: Search Results OR Standard Syllabus Accordion */}
           {syllabusSearch.trim() ? (
@@ -827,16 +872,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[70vh]">
               {/* Left Column: Table of Contents Sidebar */}
               <div className="w-full lg:w-72 shrink-0 flex flex-col bg-white/70 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden h-[70vh]">
-                {/* ToC Header */}
-                <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
-                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                    <BookOpen className="w-4.5 h-4.5" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Table of Contents</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                    📖 Navigate through Modules
-                  </p>
-                </div>
+        
 
                 {/* ToC List (Scrollable) */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
@@ -1257,12 +1293,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       )}
 
       {/* Apple Floating Upload Button */}
-      <button
-        onClick={() => setIsUploadOpen(true)}
-        className="fixed bottom-24 right-5 md:bottom-10 md:right-10 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer border border-white/10"
-      >
-        <Plus className="w-5.5 h-5.5" />
-      </button>
+      {activeSubTab === 'files' && (
+        <button
+          onClick={() => setIsUploadOpen(true)}
+          className="fixed bottom-24 right-5 md:bottom-10 md:right-10 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer border border-white/10"
+        >
+          <Plus className="w-5.5 h-5.5" />
+        </button>
+      )}
 
       {/* Clean Premium Upload Modal */}
       {isUploadOpen && (
@@ -1279,16 +1317,29 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             </div>
 
             <form onSubmit={handleUploadSubmit} className="p-4 space-y-3.5">
-              {/* Simple Drag & Drop Zone */}
-              <div
-                onClick={() => onToast('Native file system triggered')}
-                className="border border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer group"
+              {/* Simple Drag & Drop Zone with Real File Selector */}
+              <label
+                className="border border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer group relative"
               >
+                <input
+                  type="file"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      const file = e.target.files[0];
+                      setSelectedFileObj(file);
+                      setFileName(file.name);
+                      onToast(`Selected file: ${file.name}`);
+                    }
+                  }}
+                />
                 <div className="bg-blue-50 p-2 rounded-full mb-1 group-hover:bg-blue-100 transition-colors">
                   <UploadCloud className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="text-[10px] font-bold text-slate-800">Select file to shared space</p>
-              </div>
+                <p className="text-[10px] font-bold text-slate-800">
+                  {selectedFileObj ? `✓ ${selectedFileObj.name} (${Math.round(selectedFileObj.size/1024)} KB)` : 'Click or Drag file to upload to cloud'}
+                </p>
+              </label>
 
               {/* Title Input */}
               <div>
@@ -1357,6 +1408,238 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Puter: Create New Directory Modal */}
+      {isNewDirModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-5 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-black text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <FolderPlus className="w-4 h-4 text-blue-500" /> Create New Folder
+              </h3>
+              <button onClick={() => setIsNewDirModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Folder Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Python_Workshops"
+                value={newDirName}
+                onChange={(e) => setNewDirName(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNewDirModalOpen(false)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-xl text-xs transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!newDirName.trim()) return;
+                  await createStorageDirectory(currentPath, newDirName.trim());
+                  onToast(`📁 Created folder: ${newDirName}`);
+                  setNewDirName('');
+                  setIsNewDirModalOpen(false);
+                  refreshStorage();
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded-xl text-xs transition-all shadow-xs"
+              >
+                Create Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Puter: Create New Material / Note Modal */}
+      {isNewMaterialModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg p-5 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-black text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <FilePlus className="w-4 h-4 text-amber-500" /> Create Text / Code Material
+              </h3>
+              <button onClick={() => setIsNewMaterialModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  File Name (with extension, e.g. notes.md or script.js)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. guild_rules.md or index.html"
+                  value={newMatName}
+                  onChange={(e) => setNewMatName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Material Content / Code
+                </label>
+                <textarea
+                  rows={6}
+                  placeholder="# Enter markdown notes, study guides, or JavaScript snippets here..."
+                  value={newMatContent}
+                  onChange={(e) => setNewMatContent(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNewMaterialModalOpen(false)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-xl text-xs transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!newMatName.trim() || !newMatContent.trim()) return;
+                  await createStorageMaterial(currentPath, newMatName.trim(), newMatContent);
+                  onToast(`📝 Created material: ${newMatName}`);
+                  setNewMatName('');
+                  setNewMatContent('');
+                  setIsNewMaterialModalOpen(false);
+                  refreshStorage();
+                }}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2 rounded-xl text-xs transition-all shadow-xs"
+              >
+                Save Material
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table of Contents & Search Modal for Tutorials */}
+      {isTocModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/50">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-indigo-500" />
+                <h3 className="font-black text-sm uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                  Syllabus Table of Contents (10 Parts)
+                </h3>
+              </div>
+              <button onClick={() => setIsTocModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search 100+ topics by keyword..."
+                  value={syllabusSearch}
+                  onChange={(e) => setSyllabusSearch(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 pl-9 pr-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+              {syllabusSearch.trim() ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Search Results:</p>
+                  {allSyllabusLessons.filter(l => l.topic.toLowerCase().includes(syllabusSearch.toLowerCase()) || l.explanation.toLowerCase().includes(syllabusSearch.toLowerCase())).map((lesson) => (
+                    <div
+                      key={lesson.globalIndex}
+                      onClick={() => {
+                        setActiveLessonIndex(lesson.globalIndex);
+                        setIsViewingCapstone(false);
+                        setIsTocModalOpen(false);
+                      }}
+                      className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 cursor-pointer flex items-center justify-between group"
+                    >
+                      <div>
+                        <span className="text-[9px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded">
+                          Part {lesson.partNumber} • Ch {lesson.chapterNumber}
+                        </span>
+                        <h5 className="text-xs font-black text-slate-900 dark:text-slate-100 mt-1 group-hover:text-indigo-500">
+                          {lesson.topic}
+                        </h5>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                tutorialData.course.parts.map((part: any, pIdx: number) => (
+                  <div key={pIdx} className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-2 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="font-black text-xs text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <span className="bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">
+                        0{pIdx + 1}
+                      </span>
+                      <span>{part.part_title}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2">
+                      {part.chapters?.map((chap: any, cIdx: number) => {
+                        const idx = allSyllabusLessons.findIndex(l => l.partTitle === part.part_title && l.chapterNumber === chap.chapter_number);
+                        const isMastered = masteredLessons.includes(chap.topic);
+                        return (
+                          <button
+                            key={cIdx}
+                            onClick={() => {
+                              if (idx !== -1) {
+                                setActiveLessonIndex(idx);
+                                setIsViewingCapstone(false);
+                                setIsTocModalOpen(false);
+                              }
+                            }}
+                            className={`text-left p-2 rounded-lg text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                              activeLessonIndex === idx && !isViewingCapstone
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60'
+                            }`}
+                          >
+                            <span className="truncate pr-2">{chap.topic}</span>
+                            {isMastered && <span className="text-[10px] font-black text-emerald-500 shrink-0">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {/* Capstone Button */}
+              <button
+                onClick={() => {
+                  setIsViewingCapstone(true);
+                  setIsTocModalOpen(false);
+                  onToast('🎓 Opened Capstone Graduation Portal');
+                }}
+                className="w-full p-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs flex items-center justify-between shadow-xs mt-4"
+              >
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5" />
+                  <span>Final Section: Graduation Capstone Projects</span>
+                </div>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

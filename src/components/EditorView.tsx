@@ -495,7 +495,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ onToast, initialCode, on
     const postMessage = shareText.trim() || `Check out my awesome project "${title}" in LM IDE! 🚀`;
     
     let user = { name: auth.currentUser?.displayName || 'Alex M.', regNumber: 'BIT/2024/001' };
-    const uData = sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
+    const uData = localStorage.getItem('advocode_user') || localStorage.getItem('mku_it_user') || sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
     if (uData) {
       try { user = JSON.parse(uData); } catch (e) {}
     }

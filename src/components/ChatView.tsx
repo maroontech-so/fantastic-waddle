@@ -39,7 +39,8 @@ import {
   Loader2,
   AtSign,
   CornerUpLeft,
-  Copy
+  Copy,
+  Edit2
 } from 'lucide-react';
 import { MemberBioModal, MemberProfile } from './MemberBioModal';
 import { db, auth, rtdb } from '../firebase';
@@ -48,6 +49,7 @@ import { cleanForFirestore } from '../utils/clean';
 import { ref, onValue, push, set, update, onDisconnect, serverTimestamp } from 'firebase/database';
 import { User as AppUser } from '../types';
 import { uploadToImgBB } from '../utils/imgUpload';
+import { sendPushNotification } from '../utils/notifications';
 import CodeMirror, { EditorView as CMEditorView } from '@uiw/react-codemirror';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
@@ -740,6 +742,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [dmSearchText, setDmSearchText] = useState('');
   const [activeDMInput, setActiveDMInput] = useState('');
   const [replyingToMessage, setReplyingToMessage] = useState<any | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{ id: string, text: string } | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [swipedMessageId, setSwipedMessageId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const [activeContextMenu, setActiveContextMenu] = useState<{ messageId: string, x: number, y: number } | null>(null);
@@ -938,6 +942,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 const bodyLabel = v.text || '';
                 const preview = bodyLabel.length > 45 ? bodyLabel.substring(0, 45) + '...' : bodyLabel;
                 onToast(`💬 New Chat from ${senderLabel}: "${preview}"`);
+                sendPushNotification(`💬 ${senderLabel}`, { body: preview, icon: '/icon.png' });
               }
             }
           }
@@ -1142,6 +1147,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (dmTextareaRef.current) {
       dmTextareaRef.current.style.height = '38px';
     }
+
+    if (editingMessage) {
+      handleEditMessage(activeDMMember, editingMessage.id, userMsgText);
+      setEditingMessage(null);
+      return;
+    }
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const nowTs = Date.now();
 
@@ -1293,13 +1304,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  const handleEditMessage = (chatId: string, messageId: string, newText: string) => {
+    const roomKey = getRtdbRoomKey(chatId);
+    const msgRef = ref(rtdb, `chats/${roomKey}/${messageId}/text`);
+    const legacyRoomKey = [myId, chatId].sort().join('_');
+    const legacyRef = ref(rtdb, `chats/${legacyRoomKey}/${messageId}/text`);
+
+    set(msgRef, newText)
+      .then(() => {
+        onToast('Message edited successfully');
+      })
+      .catch((err) => {
+        onToast(`Failed to edit message: ${err.message}`);
+      });
+
+    if (roomKey !== legacyRoomKey) {
+      set(legacyRef, newText).catch(() => {});
+    }
+  };
+
   // Keyboard navigation reference
   const timelineRef = useRef<HTMLDivElement>(null);
 
   // Load user & posts
   useEffect(() => {
-    // Current user loaded from auth or sessionStorage
-    const uData = sessionStorage.getItem('mku_it_user');
+    // Current user loaded from auth or localStorage/sessionStorage
+    const uData = localStorage.getItem('advocode_user') || localStorage.getItem('mku_it_user') || sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
     if (uData) {
       try {
         setCurrentUserState(JSON.parse(uData));
@@ -1328,7 +1358,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const loadedPosts: EngagementPost[] = [];
       let newPostDetected: EngagementPost | null = null;
       
-      const storedUser = sessionStorage.getItem('advocode_user');
+      const storedUser = localStorage.getItem('advocode_user') || sessionStorage.getItem('advocode_user');
       const myName = storedUser ? JSON.parse(storedUser).name : 'Alex M.';
 
       snapshot.forEach((docSnap) => {
@@ -2848,7 +2878,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                               {/* Floating Micro reactions selector on hover */}
                               <div className={`absolute -top-7 ${isMe ? 'right-0' : 'left-0'} hidden group-hover:flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-full shadow-lg z-10 animate-fade-in`}>
-                                {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
+                                {['😂', '🔥', '❤️', '👏', '🙏', '🤝', '👍'].map(emoji => (
                                   <button 
                                     key={emoji}
                                     type="button"
@@ -2953,16 +2983,76 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
+                    {/* Edit Preview Banner */}
+                    {editingMessage && (
+                      <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/40 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between gap-3 animate-fade-in shrink-0">
+                        <div className="border-l-4 border-amber-500 pl-3 min-w-0">
+                          <span className="block text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                            Editing Your Message
+                          </span>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 truncate mt-0.5 font-medium">
+                            {editingMessage.text}
+                          </p>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditingMessage(null);
+                            setActiveDMInput('');
+                          }}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-amber-100 dark:hover:bg-amber-900 cursor-pointer text-xs font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Quick Emoji Picker Board */}
+                    {showEmojiPicker && (
+                      <div className="p-2.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 grid grid-cols-8 sm:grid-cols-12 gap-1.5 max-h-36 overflow-y-auto shrink-0 animate-fade-in">
+                        {[
+                          '😀', '😂', '🥲', '😊', '🥰', '😍', '🤩', '😎', '🥳', '😭', '😤', '🤯', '🥶', '😱', '🤔', '🤫',
+                          '🙄', '😬', '😴', '🤠', '👻', '🤖', '👋', '👌', '✌️', '🤞', '🤘', '🤙', '👈', '👉', '👆', '👇',
+                          '✋', '👏', '🙌', '🤝', '🙏', '💪', '🧠', '👀', '🔥', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤',
+                          '🤍', '💔', '❤️‍🔥', '💖', '✨', '⭐', '🌟', '💥', '💯', '🚀', '🎉', '🏆', '💡', '📌', '💻', '☕'
+                        ].map(emo => (
+                          <button
+                            key={emo}
+                            type="button"
+                            onClick={() => {
+                              setActiveDMInput(prev => prev + emo);
+                              if (dmTextareaRef.current) dmTextareaRef.current.focus();
+                            }}
+                            className="text-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-transform hover:scale-125 flex items-center justify-center"
+                          >
+                            {emo}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Chat Input Bar */}
                     <form 
                       onSubmit={handleSendDM}
                       className="p-3 border-t border-slate-200 dark:border-slate-800 bg-[#f0f2f5] dark:bg-slate-900 flex items-end gap-2 shrink-0"
                     >
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`p-2 rounded-full transition-colors cursor-pointer shrink-0 mb-0.5 ${showEmojiPicker ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600' : 'text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-slate-600'}`}
+                        title="Toggle Emoji Keyboard"
+                      >
+                        <Smile className="w-5 h-5" />
+                      </button>
+
                       <textarea
                         ref={dmTextareaRef}
                         required
                         rows={1}
-                        placeholder="Type a message... (use @ to mention)"
+                        inputMode="text"
+                        autoCapitalize="sentences"
+                        spellCheck="true"
+                        placeholder="Type a message... (use @ to mention, click 🙂 for emojis)"
                         value={activeDMInput}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -3060,6 +3150,35 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               <span>Copy Text</span>
                             </button>
 
+                            {/* Edit Message if user's own, <= 30 mins, and has no replies */}
+                            {(() => {
+                              const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
+                              if (!targetMsg) return null;
+                              
+                              const isOwn = targetMsg.senderId === myId || targetMsg.sender === 'me';
+                              const isRecent = targetMsg.timestamp && (Date.now() - targetMsg.timestamp) < (30 * 60 * 1000);
+                              const hasReplies = rtdbMessages.some(m => m.replyTo && m.replyTo.id === targetMsg.id);
+                              
+                              if (isOwn && isRecent && !hasReplies) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingMessage({ id: targetMsg.id, text: targetMsg.text });
+                                      setActiveDMInput(targetMsg.text);
+                                      setActiveContextMenu(null);
+                                      onToast('✏️ Editing message...');
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/25 text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 cursor-pointer transition-colors"
+                                  >
+                                    <Edit2 className="w-4 h-4 text-amber-500" />
+                                    <span>Edit Message</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
+
                             {/* Delete Message if user's own, <= 30 mins, and has no replies */}
                             {(() => {
                               const targetMsg = rtdbMessages.find(m => m.id === activeContextMenu.messageId);
@@ -3091,7 +3210,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                             {/* Quick Reactions line */}
                             <div className="flex justify-between p-1 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                              {['👍', '🔥', '😂', '❤️', '😮', '👏'].map(emoji => (
+                              {['😂', '🔥', '❤️', '👏', '🙏', '🤝', '👍'].map(emoji => (
                                 <button
                                   key={emoji}
                                   type="button"

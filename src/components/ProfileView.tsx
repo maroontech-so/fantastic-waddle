@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, User as UserIcon, Bell, Lock, Github, QrCode, ChevronRight, LogOut, Camera, X, Loader2, Moon, Sun, Download, Share2, Check, ShieldCheck, Award, Sparkles, ArrowLeft } from 'lucide-react';
+import { Pencil, User as UserIcon, Bell, Lock, Github, QrCode, ChevronRight, LogOut, Camera, X, Loader2, Moon, Sun, Download, Share2, Check, ShieldCheck, Award, Sparkles, ArrowLeft, MessageSquare, Terminal } from 'lucide-react';
 import { User } from '../types';
 import { ACHIEVEMENTS, getLevelProgress, getLevel } from '../data/achievements';
+import { DEFAULT_POSTS, EngagementPost } from './ChatView';
 
 import { uploadToImgBB } from '../utils/imgUpload';
+import { requestNotificationPermission, sendPushNotification } from '../utils/notifications';
 import { auth } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import QRCode from 'qrcode';
@@ -17,6 +19,7 @@ interface ProfileViewProps {
   onToggleTheme?: () => void;
   isReadOnly?: boolean;
   onBack?: () => void;
+  onStartDM?: (uid: string, name: string) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -28,6 +31,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onToggleTheme,
   isReadOnly = false,
   onBack,
+  onStartDM,
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
@@ -46,13 +50,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [achCategory, setAchCategory] = useState('All');
 
 
-  const saveNotificationSettings = (chats: boolean, posts: boolean, engagements: boolean) => {
+  const saveNotificationSettings = async (chats: boolean, posts: boolean, engagements: boolean) => {
     setNotifChats(chats);
     setNotifPosts(posts);
     setNotifEngagements(engagements);
     localStorage.setItem('advocode_notif_chats', String(chats));
     localStorage.setItem('advocode_notif_posts', String(posts));
     localStorage.setItem('advocode_notif_engagements', String(engagements));
+    
+    if (chats || posts || engagements) {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        sendPushNotification('🎉 Push Notifications Enabled!', { body: 'You will now receive alerts for new chats and community updates.', icon: '/icon.png' });
+      }
+    }
+    
     onToast('✓ Notification preferences saved!');
     setIsNotifModalOpen(false);
   };
@@ -590,6 +602,81 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </span>
                 ))}
               </div>
+
+              {/* Action Buttons (IG Style Profile Actions) */}
+              {isReadOnly ? (
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/60 animate-fade-in">
+                  {onStartDM && (
+                    <button
+                      type="button"
+                      onClick={() => onStartDM(user.uid || '', user.name)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 text-xs cursor-pointer active:scale-95"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Message Member</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}?profile=${user.uid || user.regNumber || user.name}`;
+                      navigator.clipboard.writeText(url);
+                      onToast(`✓ Copied link to ${user.name}'s profile!`);
+                    }}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4 text-blue-500" />
+                    <span>Share Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsQrOpen(true)}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <QrCode className="w-4 h-4 text-indigo-500" />
+                    <span>View Passport</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onToast(`🌟 You endorsed ${user.name} for engineering excellence!`)}
+                    className="bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-bold px-4 py-2.5 rounded-xl border border-amber-200/60 dark:border-amber-800/50 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span>Endorse</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/60 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOpen(true)}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Edit Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}?profile=${user.uid || user.regNumber || user.name}`;
+                      navigator.clipboard.writeText(url);
+                      onToast(`✓ Profile URL copied to clipboard!`);
+                    }}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Share Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsQrOpen(true)}
+                    className="bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold px-4 py-2 rounded-xl border border-blue-200/60 dark:border-blue-800/50 transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    <QrCode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Verification Passport</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -598,126 +685,234 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Profile Columns Dashboard */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* LEFT/CENTER COLUMN: Settings and Links (Span 2) */}
+          {/* LEFT/CENTER COLUMN: Settings and Links OR Visitor Timeline Showcase (Span 2) */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Settings Grid */}
-            <div className={isReadOnly ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
-              
-              {/* Account Settings Section */}
-              {!isReadOnly && (
+            {isReadOnly ? (
+              <div className="space-y-6 animate-fade-in">
+                {/* Visitor Mode Banner */}
+                <div className="bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
+                  <div className="p-2 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
+                    <UserIcon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Visitor Profile View</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed font-medium">
+                      You are viewing <strong className="text-blue-600 dark:text-blue-400">{user.name}</strong>&apos;s public student developer profile. Profile modification, private account settings, and creating posts on behalf of another member are disabled.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Academic & Developer Highlights */}
                 <div>
                   <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
-                    <UserIcon className="w-3.5 h-3.5" /> Account Settings
+                    <ShieldCheck className="w-3.5 h-3.5" /> Academic & Developer Highlights
                   </h3>
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                    <div
-                      onClick={() => {
-                        setIsEditOpen(true);
-                        setName(user.name);
-                        setBio(user.bio);
-                        setUsername(user.username || user.regNumber || '@developer');
-                        setSkillsString(user.skills.join(', '));
-                      }}
-                      className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
-                        <UserIcon className="w-5 h-5" />
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Registration / Handle</span>
+                        <span className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-400 block truncate">{user.username || user.regNumber || '@advocode_member'}</span>
                       </div>
-                      <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Edit Profile Details</span>
-                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                      <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Community Standing</span>
+                        <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 block flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> Verified Developer (Level {user.level || 1})
+                        </span>
+                      </div>
                     </div>
-
-                    <div
-                      onClick={toggleDarkMode}
-                      className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
-                        {currentIsDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Technical Specializations</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {user.skills.map((s, idx) => (
+                          <span key={idx} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-bold font-mono">
+                            {s}
+                          </span>
+                        ))}
                       </div>
-                      <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Dark Theme Toggle</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
-                        {currentIsDark ? 'Dark' : 'Light'}
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => setIsNotifModalOpen(true)}
-                      className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
-                        <Bell className="w-5 h-5" />
-                      </div>
-                      <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Notifications Setup</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase border border-blue-100/50 dark:border-blue-900/30">
-                        Configure
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => onToast('Security preferences configured')}
-                      className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
-                        <Lock className="w-5 h-5" />
-                      </div>
-                      <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Privacy & Security</span>
-                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Club Integrations & Pass */}
-              <div>
-                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
-                  <Github className="w-3.5 h-3.5" /> Club Connections
-                </h3>
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                  <div
-                    onClick={() => onToast('GitHub organization connections are active for AdvocoDe!')}
-                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                  >
-                    <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
-                      <Github className="w-5 h-5" />
-                    </div>
-                    <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Link GitHub organization</span>
-                    <span className="text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-850/40 uppercase tracking-wider">
-                      Connected
+                {/* Timeline Posts & Showcase by this member */}
+                <div>
+                  <div className="flex items-center justify-between mb-3 ml-2">
+                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5" /> Published Community Posts & Showcase
+                    </h3>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-0.5 rounded-full uppercase border border-blue-200/50 dark:border-blue-800/50">
+                      View Only Feed
                     </span>
                   </div>
+                  
+                  {(() => {
+                    let memberPosts: EngagementPost[] = [];
+                    try {
+                      const saved = localStorage.getItem('advocode_posts_v2') || localStorage.getItem('advocode_posts');
+                      const allPosts: EngagementPost[] = saved ? JSON.parse(saved) : DEFAULT_POSTS;
+                      memberPosts = allPosts.filter(p => 
+                        p.author?.name?.toLowerCase() === user.name?.toLowerCase() ||
+                        p.author?.regNumber?.toLowerCase() === (user.regNumber || '').toLowerCase()
+                      );
+                    } catch (err) {
+                      memberPosts = DEFAULT_POSTS.slice(0, 1);
+                    }
 
-                  <div
-                    onClick={() => setIsQrOpen(true)}
-                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                  >
-                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-150 dark:border-blue-900/30 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 shadow-xs">
-                      <QrCode className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="block text-sm font-bold text-slate-900 dark:text-slate-200 truncate">{isReadOnly ? `${user.name}'s passport` : 'Verification Passport'}</span>
-                      <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{isReadOnly ? 'View member verification credential' : 'Share or download your verified member credential'}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
-                  </div>
+                    if (memberPosts.length === 0) {
+                      return (
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center space-y-3 shadow-sm">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                            <Terminal className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Published Community Posts</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                            {user.name} has not published any code snippets, questions, or discussions to the AdvocoDe community timeline yet.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {memberPosts.map((post) => (
+                          <div key={post.id} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 transition-all hover:border-slate-300 dark:hover:border-slate-700">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
+                                {post.type.replace('_', ' ')}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{post.time}</span>
+                            </div>
+                            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-snug">{post.title || 'Community Update'}</h4>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                            {post.code && (
+                              <pre className="bg-slate-950 text-slate-200 p-3.5 rounded-xl text-[11px] font-mono overflow-x-auto border border-slate-800">
+                                <code>{post.code}</code>
+                              </pre>
+                            )}
+                            <div className="flex items-center gap-4 pt-2 border-t border-slate-100 dark:border-slate-800/60 text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                              <span>👍 {post.upvotes || 0} Upvotes</span>
+                              <span>💬 {post.comments?.length || 0} Comments</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
+            ) : (
+              /* Settings Grid for Profile Owner */
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Account Settings Section */}
+                  <div>
+                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
+                      <UserIcon className="w-3.5 h-3.5" /> Account Settings
+                    </h3>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      <div
+                        onClick={() => {
+                          setIsEditOpen(true);
+                          setName(user.name);
+                          setBio(user.bio);
+                          setUsername(user.username || user.regNumber || '@developer');
+                          setSkillsString(user.skills.join(', '));
+                        }}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                          <UserIcon className="w-5 h-5" />
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Edit Profile Details</span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                      </div>
 
-            </div>
+                      <div
+                        onClick={toggleDarkMode}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                          {currentIsDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Dark Theme Toggle</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
+                          {currentIsDark ? 'Dark' : 'Light'}
+                        </span>
+                      </div>
 
-            {/* Logout Row */}
-            {!isReadOnly && (
-              <div className="pt-2 animate-fade-in">
-                <button
-                  onClick={onSignOut}
-                  className="w-full md:w-auto md:px-12 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 font-bold py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/40 transition-all flex justify-center items-center gap-2 cursor-pointer active:scale-98 text-sm"
-                >
-                  <LogOut className="w-5 h-5" /> Sign Out from Account
-                </button>
+                      <div
+                        onClick={() => setIsNotifModalOpen(true)}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                          <Bell className="w-5 h-5" />
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Notifications Setup</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase border border-blue-100/50 dark:border-blue-900/30">
+                          Configure
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={() => onToast('Security preferences configured')}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                          <Lock className="w-5 h-5" />
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Privacy & Security</span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Club Integrations & Pass */}
+                  <div>
+                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
+                      <Github className="w-3.5 h-3.5" /> Club Connections
+                    </h3>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      <div
+                        onClick={() => onToast('GitHub organization connections are active for AdvocoDe!')}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-300">
+                          <Github className="w-5 h-5" />
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Link GitHub organization</span>
+                        <span className="text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-850/40 uppercase tracking-wider">
+                          Connected
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={() => setIsQrOpen(true)}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-150 dark:border-blue-900/30 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 shadow-xs">
+                          <QrCode className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="block text-sm font-bold text-slate-900 dark:text-slate-200 truncate">Verification Passport</span>
+                          <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">Share or download your verified member credential</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logout Row */}
+                <div className="pt-2 animate-fade-in">
+                  <button
+                    onClick={onSignOut}
+                    className="w-full md:w-auto md:px-12 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 font-bold py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/40 transition-all flex justify-center items-center gap-2 cursor-pointer active:scale-98 text-sm"
+                  >
+                    <LogOut className="w-5 h-5" /> Sign Out from Account
+                  </button>
+                </div>
               </div>
             )}
-            
           </div>
 
           {/* RIGHT COLUMN: Achievements & XP Progress Hub (Span 1) */}
@@ -917,30 +1112,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   return filtered.map((ach) => {
                     const isUnlocked = user.unlockedAchievements?.includes(ach.id) || false;
                     
-                    // Map color dynamically based on category
+                    // Map color dynamically based on category with vibrant brightened colors for unlocked
                     let colorClasses = 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-50';
                     if (isUnlocked) {
                       switch(ach.category) {
                         case 'Onboarding':
-                          colorClasses = 'from-blue-500/15 to-indigo-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300';
+                          colorClasses = 'from-blue-500/35 via-indigo-500/35 to-blue-600/35 border-blue-500 border-2 text-blue-950 dark:text-blue-100 shadow-md font-extrabold';
                           break;
                         case 'HTML':
-                          colorClasses = 'from-orange-500/15 to-amber-500/15 border-orange-500/30 text-orange-700 dark:text-orange-300';
+                          colorClasses = 'from-orange-500/35 via-amber-500/35 to-orange-600/35 border-orange-500 border-2 text-orange-950 dark:text-orange-100 shadow-md font-extrabold';
                           break;
                         case 'CSS':
-                          colorClasses = 'from-sky-500/15 to-cyan-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300';
+                          colorClasses = 'from-sky-500/35 via-cyan-500/35 to-blue-500/35 border-sky-500 border-2 text-sky-950 dark:text-sky-100 shadow-md font-extrabold';
                           break;
                         case 'JavaScript':
-                          colorClasses = 'from-yellow-500/15 to-amber-500/15 border-yellow-500/30 text-amber-700 dark:text-yellow-300';
+                          colorClasses = 'from-yellow-500/40 via-amber-500/40 to-yellow-600/40 border-amber-500 border-2 text-amber-950 dark:text-yellow-100 shadow-md font-extrabold';
                           break;
                         case 'Streak':
-                          colorClasses = 'from-rose-500/15 to-red-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300';
+                          colorClasses = 'from-rose-500/35 via-red-500/35 to-pink-500/35 border-rose-500 border-2 text-rose-950 dark:text-rose-100 shadow-md font-extrabold';
                           break;
                         case 'Special':
-                          colorClasses = 'from-purple-500/15 to-fuchsia-500/15 border-purple-500/30 text-purple-700 dark:text-purple-300';
+                          colorClasses = 'from-purple-500/35 via-fuchsia-500/35 to-pink-500/35 border-purple-500 border-2 text-purple-950 dark:text-purple-100 shadow-md font-extrabold';
                           break;
                         default:
-                          colorClasses = 'from-emerald-500/15 to-teal-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300';
+                          colorClasses = 'from-emerald-500/35 via-teal-500/35 to-emerald-600/35 border-emerald-500 border-2 text-emerald-950 dark:text-emerald-100 shadow-md font-extrabold';
                       }
                     }
 

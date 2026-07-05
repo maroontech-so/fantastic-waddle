@@ -30,27 +30,46 @@ interface ToastItem {
 }
 
 export default function App() {
-  // Application states
+  // Application states with 100% offline-ready persistent storage fallback
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const saved = sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
+      const saved = localStorage.getItem('advocode_user') || localStorage.getItem('mku_it_user') || sessionStorage.getItem('advocode_user') || sessionStorage.getItem('mku_it_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
   });
+
+  const persistUser = (u: User | null) => {
+    setUser(u);
+    if (u) {
+      localStorage.setItem('advocode_user', JSON.stringify(u));
+      sessionStorage.setItem('advocode_user', JSON.stringify(u));
+    } else {
+      localStorage.removeItem('advocode_user');
+      localStorage.removeItem('mku_it_user');
+      sessionStorage.removeItem('advocode_user');
+      sessionStorage.removeItem('mku_it_user');
+    }
+  };
+
   const [currentView, setCurrentView] = useState<string>(() => {
-    return sessionStorage.getItem('advocode_current_view') || 'chat';
+    return localStorage.getItem('advocode_current_view') || sessionStorage.getItem('advocode_current_view') || 'chat';
   });
   useEffect(() => {
+    localStorage.setItem('advocode_current_view', currentView);
     sessionStorage.setItem('advocode_current_view', currentView);
   }, [currentView]);
 
   const [viewedProfile, setViewedProfile] = useState<User | null>(null);
   const [chatViewModeState, setChatViewModeState] = useState<'timeline' | 'messages'>('timeline');
 
+  // Native Mobile Back Navigation: push to history instead of replacing so back button navigates back cleanly
   const handleNavigate = (view: string) => {
     setViewedProfile(null);
+    if (view !== currentView) {
+      window.history.pushState({ view, isAppNav: true }, '', '#' + view);
+    }
     setCurrentView(view);
   };
 
@@ -114,8 +133,7 @@ export default function App() {
         unlockedAchievements: updatedUnlocks
       };
       
-      setUser(updatedUser);
-      sessionStorage.setItem('advocode_user', JSON.stringify(updatedUser));
+      persistUser(updatedUser);
       if (updatedUser.uid || auth.currentUser?.uid) {
         setDoc(doc(db, "users", updatedUser.uid || auth.currentUser!.uid), cleanForFirestore(updatedUser), { merge: true })
           .catch(err => console.error("Firestore achievements sync error:", err));
@@ -232,8 +250,7 @@ export default function App() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const userData = { uid: firebaseUser.uid, ...docSnap.data() } as User;
-            setUser(userData);
-            sessionStorage.setItem('advocode_user', JSON.stringify(userData));
+            persistUser(userData);
           } else {
             const defaultUser: User = {
               uid: firebaseUser.uid,
@@ -253,16 +270,17 @@ export default function App() {
               engagementCount: 1,
             };
             await setDoc(docRef, cleanForFirestore(defaultUser), { merge: true });
-            setUser(defaultUser);
-            sessionStorage.setItem('advocode_user', JSON.stringify(defaultUser));
+            persistUser(defaultUser);
           }
         } catch (err) {
           console.error("Error fetching user profile from Firestore:", err);
+          const cachedUser = localStorage.getItem('advocode_user') || sessionStorage.getItem('advocode_user');
+          if (cachedUser) {
+            try { persistUser(JSON.parse(cachedUser)); } catch (e) {}
+          }
         }
       } else {
-        setUser(null);
-        sessionStorage.removeItem('advocode_user');
-        sessionStorage.removeItem('mku_it_user');
+        persistUser(null);
       }
     });
 
@@ -288,6 +306,76 @@ export default function App() {
       clearTimeout(timer);
     };
   }, []);
+
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      triggerToast('🟢 Back Online! Offline changes synchronized.');
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      triggerToast('⚡ Offline Mode active. Full app caching & local storage ready.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Native Mobile Back Navigation Handler
+  useEffect(() => {
+    // Ensure initial root state exists in history so mobile back button never exits or restarts the app
+    const hashView = window.location.hash.replace('#', '').split('/')[0];
+    const initialView = ['chat', 'library', 'workspace', 'profile', 'tutorial', 'editor'].includes(hashView) ? hashView : currentView;
+    if (initialView !== currentView) {
+      setCurrentView(initialView);
+    }
+    if (!window.history.state || !window.history.state.isAppNav) {
+      window.history.replaceState({ view: initialView, isRoot: true, isAppNav: true }, '', '#' + initialView);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Prevent app restart or browser exit when back button is pressed on mobile
+      if (isMobileDrawerOpen) {
+        setIsMobileDrawerOpen(false);
+        return;
+      }
+      if (viewedProfile) {
+        setViewedProfile(null);
+        return;
+      }
+      if (scannedProfileUid) {
+        setScannedProfileUid(null);
+        return;
+      }
+
+      const state = event.state;
+      if (state && state.view) {
+        setCurrentView(state.view);
+        if (state.profileUid) {
+          const found = allUsers.find(u => u.uid === state.profileUid);
+          if (found) setViewedProfile(found);
+        } else {
+          setViewedProfile(null);
+        }
+      } else {
+        // If popped to root or empty state, return to base chat view without restarting
+        setCurrentView('chat');
+        setViewedProfile(null);
+        if (!window.history.state || !window.history.state.isAppNav) {
+          window.history.pushState({ view: 'chat', isRoot: true, isAppNav: true }, '', '#chat');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isMobileDrawerOpen, viewedProfile, scannedProfileUid, allUsers, currentView]);
 
   // Handle Google Sign In
   const handleGoogleSignIn = async () => {
@@ -505,7 +593,7 @@ export default function App() {
       };
 
       
-      sessionStorage.setItem('advocode_user', JSON.stringify(updated));
+      persistUser(updated);
       if (updated.uid || auth.currentUser?.uid) {
         setDoc(doc(db, "users", updated.uid || auth.currentUser!.uid), cleanForFirestore(updated), { merge: true }).catch(err => console.error(err));
       }
@@ -524,9 +612,7 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      sessionStorage.removeItem('advocode_user');
-      sessionStorage.removeItem('mku_it_user');
-      setUser(null);
+      persistUser(null);
       setCurrentView('chat');
       triggerToast('Logged out successfully.');
     } catch (err) {
@@ -572,8 +658,7 @@ export default function App() {
 
   // Update Profile details
   const handleUpdateUser = (updatedUser: User) => {
-    setUser(updatedUser);
-    sessionStorage.setItem('advocode_user', JSON.stringify(updatedUser));
+    persistUser(updatedUser);
     if (updatedUser.uid || auth.currentUser?.uid) {
       setDoc(doc(db, "users", updatedUser.uid || auth.currentUser!.uid), cleanForFirestore(updatedUser), { merge: true }).catch(err => console.error(err));
     }
@@ -892,6 +977,13 @@ export default function App() {
                   onToggleTheme={toggleDarkMode}
                   isReadOnly={!!viewedProfile && viewedProfile.uid !== user.uid}
                   onBack={viewedProfile ? () => setViewedProfile(null) : undefined}
+                  onStartDM={(uid, name) => {
+                    setInitialDMUserUid(uid);
+                    setChatViewModeState('messages');
+                    setViewedProfile(null);
+                    setCurrentView('chat');
+                    triggerToast(`Opening direct message conversation with ${name}...`);
+                  }}
                 />
               )}
             </div>
