@@ -61,7 +61,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (chats || posts || engagements) {
       const granted = await requestNotificationPermission();
       if (granted) {
-        sendPushNotification('🎉 Push Notifications Enabled!', { body: 'You will now receive alerts for new chats and community updates.', icon: '/icon.png' });
+        sendPushNotification('🎉 Push Notifications Enabled!', { body: 'You will now receive alerts for new chats and community updates.', icon: '/logo.svg' });
       }
     }
     
@@ -850,6 +850,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Notifications Setup</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 uppercase border border-blue-100/50 dark:border-blue-900/30">
                           Configure
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          if ((window as any).triggerPwaInstallModal) {
+                            (window as any).triggerPwaInstallModal();
+                          } else {
+                            onToast('PWA install instructions loading...');
+                          }
+                        }}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-t border-slate-100 dark:border-slate-800/60"
+                      >
+                        <div className="bg-amber-100 dark:bg-amber-950/40 p-2.5 rounded-xl text-amber-600 dark:text-amber-400">
+                          <Download className="w-5 h-5 animate-bounce" />
+                        </div>
+                        <span className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-200">Install &lt;/AdvocoDe&gt; PWA App</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 uppercase border border-amber-100/50 dark:border-amber-900/30">
+                          Download
                         </span>
                       </div>
 
